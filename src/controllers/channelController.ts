@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { Channel } from '../models/Channel';
 import type { AuthRequest, RouteHandler } from '../types/express';
 import mongoose from 'mongoose';
+import { schemas } from '../validation/schemas';
 
 export const getChannels = async (req: AuthRequest, res: Response) => {
   try {
@@ -18,7 +19,20 @@ export const getChannels = async (req: AuthRequest, res: Response) => {
 
 export const createChannel = async (req: AuthRequest, res: Response) => {
   try {
-    const { name, description, isPrivate } = req.body;
+    const { error, value } = schemas.channel.create.validate(req.body);
+    if (error) {
+      return res.status(400).json({
+        message: 'Validation error',
+        details: error.details[0].message
+      });
+    }
+
+    const { name, description, isPrivate } = value;
+
+    const existingChannel = await Channel.findOne({ name });
+    if (existingChannel) {
+      return res.status(400).json({ message: 'A channel with this name already exists' });
+    }
 
     const channel = new Channel({
       name,
@@ -34,7 +48,7 @@ export const createChannel = async (req: AuthRequest, res: Response) => {
     res.status(201).json(channel);
   } catch (error) {
     if (error instanceof Error && 'code' in error && error.code === 11000) {
-      return res.status(400).json({ message: 'En kanal med det namnet finns redan' });
+      return res.status(400).json({ message: 'A channel with this name already exists' });
     }
     res.status(500).json({ message: 'Error creating channel' });
   }

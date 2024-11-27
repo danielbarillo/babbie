@@ -1,17 +1,26 @@
 import mongoose from 'mongoose';
-import { config } from './config';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 export const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(config.mongoUri, {
+    const mongoURI = process.env.MONGODB_URI;
+    console.log('Attempting to connect to MongoDB...');
+
+    if (!mongoURI) {
+      throw new Error('MONGODB_URI is not defined in environment variables');
+    }
+
+    await mongoose.connect(mongoURI, {
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
-      family: 4
     });
 
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
+    mongoose.connection.on('connected', () => {
+      console.log(`MongoDB Connected: ${mongoose.connection.host}`);
+    });
 
-    // Handle connection errors after initial connection
     mongoose.connection.on('error', (err) => {
       console.error('MongoDB connection error:', err);
     });
@@ -20,14 +29,8 @@ export const connectDB = async () => {
       console.log('MongoDB disconnected');
     });
 
-    // Handle process termination
-    process.on('SIGINT', async () => {
-      await mongoose.connection.close();
-      process.exit(0);
-    });
-
   } catch (error) {
-    console.error('Error connecting to MongoDB:', error);
-    process.exit(1);
+    console.error('MongoDB connection error:', error);
+    console.log('Check if your MongoDB Atlas credentials are correct and IP is whitelisted');
   }
 };

@@ -1,26 +1,15 @@
-import { Request, Response } from 'express';
+import express from 'express';
 import jwt from 'jsonwebtoken';
 import { User } from '../models/User';
+import mongoose from 'mongoose';
 import { schemas } from '../validation/schemas';
 
-// Define the AuthRequest interface
-interface AuthRequest extends Request {
-  user: {
-    _id: string;
-  };
-}
+const router = express.Router();
 
-export const register = async (req: Request, res: Response) => {
+// Register
+router.post('/register', async (req, res) => {
   try {
-    // Validate request body
-    const { error } = schemas.auth.register.validate(req.body);
-    if (error) {
-      return res.status(400).json({
-        message: 'Validation error',
-        details: error.details[0].message
-      });
-    }
-
+    console.log('Registration request received:', req.body);
     const { username, email, password } = req.body;
 
     // Check if user already exists
@@ -29,6 +18,7 @@ export const register = async (req: Request, res: Response) => {
     });
 
     if (existingUser) {
+      console.log('User already exists:', { email, username });
       return res.status(400).json({
         message: existingUser.email === email ? 'Email already registered' : 'Username already taken'
       });
@@ -38,10 +28,11 @@ export const register = async (req: Request, res: Response) => {
     const user = new User({
       username,
       email,
-      password
+      password,
     });
 
     await user.save();
+    console.log('New user created:', { email, username });
 
     // Generate JWT
     const token = jwt.sign(
@@ -56,8 +47,8 @@ export const register = async (req: Request, res: Response) => {
       user: {
         id: user._id,
         username: user.username,
-        email: user.email
-      }
+        email: user.email,
+      },
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -66,13 +57,23 @@ export const register = async (req: Request, res: Response) => {
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
-};
+});
 
-export const login = async (req: Request, res: Response) => {
+// Login
+router.post('/login', async (req, res) => {
   try {
+    console.log('Login request received:', req.body);
+
+    // Check MongoDB connection first
+    if (mongoose.connection.readyState !== 1) {
+      console.error('MongoDB not connected. Current state:', mongoose.connection.readyState);
+      return res.status(500).json({ message: 'Database connection error' });
+    }
+
     // Validate request body
     const { error } = schemas.auth.login.validate(req.body);
     if (error) {
+      console.log('Validation error:', error.details);
       return res.status(400).json({
         message: 'Validation error',
         details: error.details[0].message
@@ -83,12 +84,20 @@ export const login = async (req: Request, res: Response) => {
 
     // Find user
     const user = await User.findOne({ email });
+    console.log('User lookup result:', user ? {
+      email: user.email,
+      username: user.username,
+      hasPassword: !!user.password
+    } : 'User not found');
+
     if (!user) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
     // Check password
     const isMatch = await user.comparePassword(password);
+    console.log('Password check result:', { isMatch });
+
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
@@ -100,49 +109,24 @@ export const login = async (req: Request, res: Response) => {
       { expiresIn: '24h' }
     );
 
+    console.log('Login successful:', { email: user.email });
+
     // Return user data and token
     res.json({
       token,
       user: {
         id: user._id,
         username: user.username,
-        email: user.email
-      }
+        email: user.email,
+      },
     });
-  } catch (error) {
-    console.error('Login error:', error);
+  } catch (error: any) {
+    console.error('Login error details:', error);
     res.status(500).json({
       message: 'Server error',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
-};
+});
 
-export const me = async (req: AuthRequest, res: Response) => {
-  try {
-    const user = await User.findById(req.user._id);
-    if (!user) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'User not found'
-      });
-    }
-
-    res.json({
-      status: 'success',
-      data: {
-        user: {
-          _id: user._id,
-          username: user.username,
-          email: user.email
-        }
-      }
-    });
-  } catch (error) {
-    console.error('Me endpoint error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Error fetching user data'
-    });
-  }
-};
+export default router;

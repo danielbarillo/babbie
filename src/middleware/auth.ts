@@ -1,41 +1,99 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { config } from '../config/config';
-import type { AuthRequest } from '../types/express';
+import { User, UserDocument } from '../models/User';
 
-interface JWTPayload {
+// Define specific types for different user states
+type AuthenticatedUser = {
   _id: string;
   username: string;
-  avatarColor?: string;
+  email: string;
+  type: 'authenticated';
+};
+
+type GuestUser = {
+  type: 'guest';
+};
+
+type UserState = AuthenticatedUser | GuestUser;
+
+// Extend Request with our specific user type
+export interface AuthRequest extends Request {
+  userState?: UserState;
+  user?: { _id: string };
 }
 
-export const protect = (req: Request, res: Response, next: NextFunction) => {
+interface JwtPayload {
+  userId: string;
+}
+
+// Helper function to check if user is authenticated
+export const isAuthenticated = (userState: UserState): userState is AuthenticatedUser => {
+  return userState.type === 'authenticated';
+};
+
+// Middleware to attach user state - either authenticated or guest
+export const attachUserState = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
 
     if (!token) {
-      return res.status(401).json({ error: 'Please authenticate.' });
+      req.userState = { type: 'guest' };
+      return next();
     }
 
-    const decoded = jwt.verify(token, config.jwtSecret) as JWTPayload;
-    (req as AuthRequest).user = decoded;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
+    const user = await User.findById(decoded.userId).select('_id username email') as UserDocument | null;
+
+    if (!user) {
+      req.userState = { type: 'guest' };
+      return next();
+    }
+
+    const userState: AuthenticatedUser = {
+      _id: user._id.toString(),
+      username: user.username,
+      email: user.email,
+      type: 'authenticated'
+    };
+
+    req.userState = userState;
+    req.user = { _id: userState._id };
     next();
   } catch (error) {
-    res.status(401).json({ error: 'Please authenticate.' });
+    console.error('Token verification error:', error);
+    req.userState = { type: 'guest' };
+    next();
   }
 };
 
-export const guestOrAuth = (req: Request, res: Response, next: NextFunction) => {
+// Middleware to require authentication
+export const requireAuth = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
 
-    if (token) {
-      const decoded = jwt.verify(token, config.jwtSecret) as JWTPayload;
-      (req as AuthRequest).user = decoded;
+    if (!token) {
+      return res.status(401).json({ message: 'No token provided' });
     }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
+    const user = await User.findById(decoded.userId) as UserDocument | null;
+
+    if (!user) {
+      return res.status(401).json({ message: 'User not found' });
+    }
+
+    const userState: AuthenticatedUser = {
+      _id: user._id.toString(),
+      username: user.username,
+      email: user.email,
+      type: 'authenticated'
+    };
+
+    req.userState = userState;
+    req.user = { _id: userState._id };
     next();
   } catch (error) {
-    // Continue as guest if token is invalid
-    next();
+    console.error('Auth middleware error:', error);
+    return res.status(401).json({ message: 'Invalid token' });
   }
 };

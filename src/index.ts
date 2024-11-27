@@ -1,49 +1,59 @@
 import express from 'express'
+import dotenv from 'dotenv'
+import mongoose from 'mongoose'
 import cors from 'cors'
-import { config } from './config/config'
-import { connectDB } from './config/db'
 import routes from './routes'
 
+dotenv.config()
+
+const app = express()
+
+// Middleware
+app.use(express.json())
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}))
+
+// Logging middleware
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path}`, req.body)
+  next()
+})
+
+// Routes
+app.use('/api', routes)
+
+// Error handling
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Error:', err)
+  res.status(500).json({
+    message: 'Internal server error',
+    details: err.message
+  })
+})
+
+// Connect to MongoDB and start server
 const startServer = async () => {
   try {
-    // Connect to MongoDB first
-    await connectDB()
+    const mongoURI = process.env.MONGODB_URI
+    if (!mongoURI) {
+      throw new Error('MONGODB_URI is not defined')
+    }
 
-    const app = express()
+    await mongoose.connect(mongoURI)
+    console.log('Connected to MongoDB')
 
-    // Middleware
-    app.use(express.json())
-    app.use(cors({
-      origin: config.corsOrigins,
-      credentials: true
-    }))
-
-    // Routes
-    app.use('/api', routes)
-
-    // Error handling middleware
-    app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-      console.error(err.stack)
-      res.status(500).json({
-        status: 'error',
-        message: 'Something went wrong!'
-      })
-    })
-
-    // Start server
-    app.listen(config.port, () => {
-      console.log(`Server running on port ${config.port}`)
+    const PORT = process.env.PORT || 5001
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`)
     })
   } catch (error) {
-    console.error('Failed to start server:', error)
+    console.error('Server startup error:', error)
     process.exit(1)
   }
 }
-
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (err) => {
-  console.error('Unhandled Promise Rejection:', err)
-  process.exit(1)
-})
 
 startServer()
