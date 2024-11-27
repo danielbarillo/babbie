@@ -1,0 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_1 = require("../middleware/auth");
+const messageController_1 = require("../controllers/messageController");
+const wrapHandler_1 = require("../utils/wrapHandler");
+const router = (0, express_1.Router)();
+router.get('/:channelId', auth_1.protect, (0, wrapHandler_1.wrapAuthHandler)(messageController_1.getMessages));
+router.post('/:channelId', auth_1.protect, (0, wrapHandler_1.wrapAuthHandler)(messageController_1.sendMessage));
+router.delete('/:messageId', auth_1.protect, (0, wrapHandler_1.wrapAuthHandler)(messageController_1.deleteMessage));
+exports.default = router;

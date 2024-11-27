@@ -1,0 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_1 = require("../middleware/auth");
+const validate_1 = require("../middleware/validate");
+const schemas_1 = require("../validation/schemas");
+const channelController_1 = require("../controllers/channelController");
+const wrapHandler_1 = require("../utils/wrapHandler");
+const router = (0, express_1.Router)();
+router.get('/', auth_1.guestOrAuth, (0, wrapHandler_1.wrapAuthHandler)(channelController_1.getChannels));
+router.post('/', auth_1.protect, (0, validate_1.validate)(schemas_1.schemas.channel), (0, wrapHandler_1.wrapAuthHandler)(channelController_1.createChannel));
+router.post('/:channelId/join', auth_1.protect, (0, wrapHandler_1.wrapAuthHandler)(channelController_1.joinChannel));
+router.post('/:channelId/leave', auth_1.protect, (0, wrapHandler_1.wrapAuthHandler)(channelController_1.leaveChannel));
+exports.default = router;
