@@ -3,22 +3,27 @@ import { useStore } from '../store/useStore';
 
 interface AuthContextType {
   isAuthenticated: boolean;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { userState, logout: storeLogout } = useStore();
+  const { userState, login: storeLogin, logout: storeLogout } = useStore();
 
   const isAuthenticated = userState?.type === 'authenticated';
+
+  const login = async (email: string, password: string) => {
+    await storeLogin(email, password);
+  };
 
   const logout = () => {
     storeLogout();
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
