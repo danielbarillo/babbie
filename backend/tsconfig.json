@@ -10,8 +10,10 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "types": ["node", "express", "mongoose", "jsonwebtoken", "cors", "bcryptjs"],
-    "typeRoots": ["./node_modules/@types", "./src/types"]
+    "allowJs": true,
+    "declaration": true,
+    "typeRoots": ["./node_modules/@types"],
+    "types": ["node"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
