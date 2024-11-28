@@ -15,7 +15,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAuthenticated = userState?.type === 'authenticated';
 
   const login = async (email: string, password: string) => {
-    await storeLogin(email, password);
+    await storeLogin({ email, password });
   };
 
   const logout = () => {
