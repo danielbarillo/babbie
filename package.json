@@ -7,8 +7,7 @@
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
-    "postinstall": "npm run build",
-    "watch": "tsc -w"
+    "postinstall": "npm run build"
   },
   "dependencies": {
     "@types/express-rate-limit": "^5.1.3",
