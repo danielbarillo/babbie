@@ -1,0 +1,28 @@
+services:
+  # Backend API service
+  - type: web
+    name: chappy-backend
+    runtime: node
+    plan: free
+    rootDirectory: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5001
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+
+  # Frontend static site
+  - type: static
+    name: chappy-frontend
+    rootDirectory: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://chappy-backend.onrender.com/api
