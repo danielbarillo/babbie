@@ -1,1 +1,21 @@
- 
+{
+  "name": "chappy",
+  "version": "1.0.0",
+  "description": "Chappy - Modern Chat Application",
+  "scripts": {
+    "install-frontend": "cd frontend && npm install",
+    "install-backend": "cd backend && npm install",
+    "postinstall": "npm run install-frontend && npm run install-backend",
+    "build-frontend": "cd frontend && npm run build",
+    "build-backend": "cd backend && npm run build",
+    "build": "npm run build-frontend && npm run build-backend",
+    "start": "cd backend && npm start",
+    "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm run dev\""
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "concurrently": "^8.0.1"
+  }
+}
