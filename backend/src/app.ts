@@ -10,26 +10,11 @@ dotenv.config();
 
 const app = express();
 
-// Define allowed origins
-const allowedOrigins = [
-  'https://chappy-frontend.onrender.com',
-  'http://localhost:5173',
-  'http://127.0.0.1:5173'
-];
-
 app.use(express.json());
 
-// CORS configuration
+// Simple CORS configuration that allows all requests
 app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigins.indexOf(origin) === -1) {
-      return callback(null, false);
-    }
-    return callback(null, true);
-  },
+  origin: true, // Allow all origins
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -37,17 +22,6 @@ app.use(cors({
 
 // API routes
 app.use('/api', routes);
-
-// Serve static files in production
-if (process.env.NODE_ENV === 'production') {
-  const frontendBuildPath = path.join(__dirname, '../../frontend/dist');
-
-  app.use(express.static(frontendBuildPath));
-
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(frontendBuildPath, 'index.html'));
-  });
-}
 
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
