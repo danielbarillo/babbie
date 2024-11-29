@@ -131,7 +131,7 @@ export const useStore = create<StoreState>()(
         }
 
         try {
-          const { data } = await api.get('/auth/me');
+          const { data } = await api.get('/api/auth/me');
           set({ isInitialized: true });
 
           // Fetch channels after verifying auth
@@ -154,7 +154,7 @@ export const useStore = create<StoreState>()(
         try {
           set({ isLoading: true, error: null });
           console.log('Attempting login with credentials:', { ...credentials, password: '[REDACTED]' });
-          const { data } = await api.post('/auth/login', credentials);
+          const { data } = await api.post('/api/auth/login', credentials);
 
           const authenticatedUser: AuthenticatedUser = {
             _id: data.user.id,
@@ -232,7 +232,7 @@ export const useStore = create<StoreState>()(
       register: async (userData) => {
         try {
           set({ isLoading: true, error: null });
-          const { data } = await api.post('/auth/register', userData);
+          const { data } = await api.post('/api/auth/register', userData);
 
           const authenticatedUser: AuthenticatedUser = {
             _id: data.user.id,
@@ -286,7 +286,7 @@ export const useStore = create<StoreState>()(
       fetchChannels: async () => {
         try {
           set({ isLoading: true, error: null });
-          const { data } = await api.get('/channels');
+          const { data } = await api.get('/api/channels');
           set({ channels: data, isLoading: false });
         } catch (error) {
           const apiError = error as ApiError;
@@ -300,7 +300,7 @@ export const useStore = create<StoreState>()(
       createChannel: async (channelData) => {
         try {
           set({ isLoading: true, error: null });
-          const { data: newChannel } = await api.post('/channels', channelData);
+          const { data: newChannel } = await api.post('/api/channels', channelData);
           set(state => ({
             channels: [...state.channels, newChannel],
             currentChannel: newChannel,
@@ -332,7 +332,7 @@ export const useStore = create<StoreState>()(
             return;
           }
 
-          await api.post(`/channels/${channelId}/join`);
+          await api.post(`/api/channels/${channelId}/join`);
           set({ currentChannel: channel, isLoading: false });
           await get().fetchMessages(channelId);
         } catch (error) {
@@ -347,7 +347,7 @@ export const useStore = create<StoreState>()(
       leaveChannel: async (channelId) => {
         try {
           set({ isLoading: true, error: null });
-          await api.post(`/channels/${channelId}/leave`);
+          await api.post(`/api/channels/${channelId}/leave`);
 
           set(state => ({
             channels: state.channels.filter(ch => ch._id !== channelId),
@@ -372,7 +372,7 @@ export const useStore = create<StoreState>()(
 
         try {
           set({ isLoading: true, error: null });
-          const { data } = await api.post(`/messages/channel/${currentChannel._id}`, { content });
+          const { data } = await api.post(`/api/messages/channel/${currentChannel._id}`, { content });
           set(state => ({
             messages: [...state.messages, data],
             isLoading: false
@@ -389,7 +389,7 @@ export const useStore = create<StoreState>()(
       fetchMessages: async (channelId) => {
         try {
           set({ isLoading: true, error: null });
-          const { data } = await api.get(`/messages/channel/${channelId}`);
+          const { data } = await api.get(`/api/messages/channel/${channelId}`);
           set({ messages: data, isLoading: false });
         } catch (error) {
           const apiError = error as ApiError;
@@ -403,7 +403,7 @@ export const useStore = create<StoreState>()(
       fetchConversations: async () => {
         try {
           set({ isLoading: true, error: null });
-          const { data } = await api.get('/dm/conversations');
+          const { data } = await api.get('/api/dm/conversations');
           set({ conversations: data, isLoading: false });
         } catch (error) {
           console.error('Fetch conversations error:', error);
@@ -418,7 +418,7 @@ export const useStore = create<StoreState>()(
       fetchDirectMessages: async (userId: string) => {
         try {
           set({ isLoading: true, error: null });
-          const { data } = await api.get(`/dm/${userId}`);
+          const { data } = await api.get(`/api/dm/${userId}`);
           set({ directMessages: data, isLoading: false });
         } catch (error) {
           console.error('Fetch direct messages error:', error);
@@ -433,7 +433,7 @@ export const useStore = create<StoreState>()(
       sendDirectMessage: async (content: string, recipientId: string) => {
         try {
           set({ isLoading: true, error: null });
-          const { data: message } = await api.post('/dm', { content, recipientId });
+          const { data: message } = await api.post('/api/dm', { content, recipientId });
 
           set(state => ({
             directMessages: [...state.directMessages, message],
