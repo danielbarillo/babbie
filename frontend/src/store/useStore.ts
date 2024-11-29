@@ -92,7 +92,8 @@ interface StoreState {
   setCurrentConversation: (conversation: Conversation | null) => void
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api'
+const API_URL = process.env.VITE_API_URL || 'http://localhost:5001/api'
+console.log('API URL:', API_URL)
 
 // Helper function to check if user is authenticated
 const isAuthenticated = (userState: UserState | null): userState is AuthenticatedUser => {
