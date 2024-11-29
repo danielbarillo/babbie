@@ -16,15 +16,10 @@ services:
         sync: false
       - key: JWT_SECRET
         sync: false
-      - key: CORS_ORIGIN
-        value: https://chappy-frontend.onrender.com
 
   # Frontend static site
   - type: static
     name: chappy-frontend
     rootDirectory: frontend
-    buildCommand: npm install && VITE_API_URL=https://chappy.onrender.com/api npm run build
+    buildCommand: npm install && npm run build
     staticPublishPath: dist
-    envVars:
-      - key: VITE_API_URL
-        value: https://chappy.onrender.com/api

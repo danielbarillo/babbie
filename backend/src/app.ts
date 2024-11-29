@@ -12,18 +12,10 @@ const app = express();
 app.use(express.json());
 
 // CORS configuration
-app.use(cors({
-  origin: ['https://chappy-frontend.onrender.com', 'http://localhost:5173'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+app.use(cors());
 
-// Pre-flight requests
-app.options('*', cors());
-
-// Basic health check route
-app.get('/api/health', (req, res) => {
+// Basic health check route (BEFORE other routes)
+app.get('/api/health', (_, res) => {
   res.json({ status: 'ok', message: 'Server is running' });
 });
 
@@ -53,7 +45,6 @@ const startServer = async () => {
       app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
         console.log(`MongoDB connected: ${mongoose.connection.host}`);
-        console.log(`CORS origin: ${process.env.CORS_ORIGIN || 'https://chappy-frontend.onrender.com'}`);
       });
     } else {
       console.error('Failed to connect to MongoDB. Server not started.');

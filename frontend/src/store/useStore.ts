@@ -92,8 +92,12 @@ interface StoreState {
   setCurrentConversation: (conversation: Conversation | null) => void
 }
 
-const API_URL = import.meta.env.VITE_API_URL
-console.log('Using API URL:', API_URL)
+const API_URL = import.meta.env.MODE === 'production'
+  ? 'https://chappy.onrender.com/api'
+  : 'http://localhost:5001/api';
+
+console.log('Mode:', import.meta.env.MODE);
+console.log('Using API URL:', API_URL);
 
 if (!API_URL) {
   console.error('VITE_API_URL is not defined!')
