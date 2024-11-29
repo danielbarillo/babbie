@@ -12,15 +12,15 @@ router.get('/health', (_, res) => {
 });
 
 // Auth routes
-router.use('/auth', authRoutes);
+router.use('/api/auth', authRoutes);
 
 // Channel routes
-router.use('/channels', channelRoutes);
+router.use('/api/channels', channelRoutes);
 
 // Message routes
-router.use('/messages', messageRoutes);
+router.use('/api/messages', messageRoutes);
 
 // Direct message routes
-router.use('/dm', directMessageRoutes);
+router.use('/api/dm', directMessageRoutes);
 
 export default router;
