@@ -12,16 +12,11 @@ const app = express();
 
 app.use(express.json());
 
-// Enable CORS for all routes
-app.use(cors());
-
-// More specific CORS for API routes
-app.use('/api', cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? ['https://chappy-frontend.onrender.com']
-    : ['http://localhost:5173', 'http://127.0.0.1:5173'],
+// Enable CORS for all routes with specific configuration
+app.use(cors({
+  origin: '*',
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
