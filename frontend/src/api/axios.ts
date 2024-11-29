@@ -14,6 +14,11 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
+  // Ensure all requests go to /api/...
+  if (!config.url?.startsWith('/api/')) {
+    config.url = `/api${config.url}`;
+  }
+
   console.log('Making request to:', `${config.baseURL}${config.url}`);
   return config;
 });

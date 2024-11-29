@@ -80,18 +80,17 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    const { email, password } = req.body;
+    const { username, password } = req.body;
 
-    // Find user and select password field
-    const user = await User.findOne({ email }).select('+password');
+    // Find user by username and select password field
+    const user = await User.findOne({ username }).select('+password');
     console.log('User lookup result:', user ? {
-      email: user.email,
       username: user.username,
       hasPassword: !!user.password
     } : 'User not found');
 
     if (!user) {
-      return res.status(401).json({ message: 'Invalid email or password' });
+      return res.status(401).json({ message: 'Invalid username or password' });
     }
 
     // Check password
@@ -99,7 +98,7 @@ router.post('/login', async (req, res) => {
     console.log('Password check result:', { isMatch });
 
     if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid email or password' });
+      return res.status(401).json({ message: 'Invalid username or password' });
     }
 
     // Generate JWT
@@ -109,7 +108,7 @@ router.post('/login', async (req, res) => {
       { expiresIn: '24h' }
     );
 
-    console.log('Login successful:', { email: user.email });
+    console.log('Login successful:', { username: user.username });
 
     // Return user data and token
     res.json({
