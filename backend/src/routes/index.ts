@@ -2,7 +2,7 @@ import express from 'express';
 import authRoutes from './authRoutes';
 import channelRoutes from './channelRoutes';
 import messageRoutes from './messageRoutes';
-import dmRoutes from './dmRoutes';
+import directMessageRoutes from './directMessageRoutes';
 
 const router = express.Router();
 
@@ -21,6 +21,6 @@ router.use('/channels', channelRoutes);
 router.use('/messages', messageRoutes);
 
 // Direct message routes
-router.use('/dm', dmRoutes);
+router.use('/dm', directMessageRoutes);
 
 export default router;
