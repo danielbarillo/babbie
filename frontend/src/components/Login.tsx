@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import api from '../api/axios';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 
@@ -15,19 +14,10 @@ export default function Login() {
     setError('');
 
     try {
-      const response = await api.post('/api/auth/login', {
-        email,
-        password,
-      });
-
-      if (response.status === 200 && response.data) {
-        login(response.data.token);
-        navigate('/chat');
-      } else {
-        setError('Invalid credentials');
-      }
+      await login(email, password);
+      navigate('/chat');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to login');
+      setError(err.message || 'Failed to login');
     }
   };
 
