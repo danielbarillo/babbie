@@ -3,13 +3,11 @@ import Joi from 'joi';
 export const schemas = {
   auth: {
     login: Joi.object({
-      email: Joi.string()
-        .email()
+      username: Joi.string()
         .required()
         .messages({
-          'string.email': 'Please enter a valid email address',
-          'string.empty': 'Email is required',
-          'any.required': 'Email is required'
+          'string.empty': 'Username is required',
+          'any.required': 'Username is required'
         }),
       password: Joi.string()
         .required()
