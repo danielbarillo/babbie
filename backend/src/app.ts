@@ -10,11 +10,26 @@ dotenv.config();
 
 const app = express();
 
+// Define allowed origins
+const allowedOrigins = [
+  'https://chappy-frontend.onrender.com',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173'
+];
+
 app.use(express.json());
 
-// Enable CORS for all routes with specific configuration
+// CORS configuration
 app.use(cors({
-  origin: '*',
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.indexOf(origin) === -1) {
+      return callback(null, false);
+    }
+    return callback(null, true);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
