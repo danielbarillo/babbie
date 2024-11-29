@@ -153,7 +153,7 @@ export const useStore = create<StoreState>()(
       login: async (credentials) => {
         try {
           set({ isLoading: true, error: null });
-          const { data } = await api.post('/auth/login', credentials);
+          const { data } = await api.post('/api/auth/login', credentials);
 
           const authenticatedUser: AuthenticatedUser = {
             _id: data.user.id,

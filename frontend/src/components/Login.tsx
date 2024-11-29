@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+import api from '../api/axios';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -16,12 +17,9 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5001/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
+      const response = await api.post('/api/auth/login', {
+        email,
+        password,
       });
 
       const data = await response.json();
