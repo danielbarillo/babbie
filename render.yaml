@@ -1,7 +1,7 @@
 services:
   # Backend API service
   - type: web
-    name: chappy
+    name: chappyv
     runtime: node
     plan: free
     rootDirectory: backend
@@ -27,7 +27,7 @@ services:
     staticPublishPath: dist
     envVars:
       - key: VITE_API_URL
-        value: https://chappy.onrender.com/api
+        value: https://chappyv.onrender.com/api
     headers:
       - path: /*
         name: Cache-Control
