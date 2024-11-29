@@ -4,6 +4,12 @@ import path from 'path'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
+  const apiUrl = env.VITE_API_URL || (mode === 'production'
+    ? 'https://chappy.onrender.com/api'
+    : 'http://localhost:5001/api')
+
+  console.log('Mode:', mode)
+  console.log('API URL:', apiUrl)
 
   return {
     plugins: [react()],
@@ -13,7 +19,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     define: {
-      'import.meta.env.VITE_API_URL': JSON.stringify(env.VITE_API_URL || 'https://chappy.onrender.com/api')
+      'import.meta.env.VITE_API_URL': JSON.stringify(apiUrl)
     },
     build: {
       outDir: 'dist',
