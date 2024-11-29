@@ -2,13 +2,7 @@ import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { User } from '../models/User';
 import { schemas } from '../validation/schemas';
-
-// Define the AuthRequest interface
-interface AuthRequest extends Request {
-  user: {
-    _id: string;
-  };
-}
+import { AuthRequest } from '../middleware/auth';
 
 export const register = async (req: Request, res: Response) => {
   try {
@@ -120,7 +114,7 @@ export const login = async (req: Request, res: Response) => {
 
 export const me = async (req: AuthRequest, res: Response) => {
   try {
-    const user = await User.findById(req.user._id);
+    const user = await User.findById(req.user?._id);
     if (!user) {
       return res.status(404).json({
         status: 'error',

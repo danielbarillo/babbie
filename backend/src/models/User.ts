@@ -51,9 +51,7 @@ userSchema.pre('save', async function(next) {
 // Method to compare passwords
 userSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
   try {
-    const user = await this.model('User').findById(this._id).select('+password');
-    if (!user) return false;
-    return await bcrypt.compare(candidatePassword, user.password);
+    return await bcrypt.compare(candidatePassword, this.password);
   } catch (error) {
     console.error('Password comparison error:', error);
     return false;
