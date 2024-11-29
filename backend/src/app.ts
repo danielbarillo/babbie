@@ -9,7 +9,13 @@ dotenv.config();
 
 const app = express();
 
-// Request logging middleware
+// Parse JSON bodies
+app.use(express.json());
+
+// CORS configuration
+app.use(cors());
+
+// Request logging middleware (AFTER body parsing)
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.path}`, {
     body: req.body,
@@ -19,18 +25,19 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json());
-
-// CORS configuration
-app.use(cors());
-
-// Basic health check route (BEFORE other routes)
+// Basic health check route
 app.get('/api/health', (_, res) => {
   res.json({ status: 'ok', message: 'Server is running' });
 });
 
 // API routes
 app.use('/api', routes);
+
+// 404 handler - must be before error handler
+app.use((req, res) => {
+  console.log('404 Not Found:', req.method, req.path);
+  res.status(404).json({ message: 'Not Found' });
+});
 
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
