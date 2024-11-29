@@ -4,7 +4,6 @@ import { connectDB } from './config/db.js';
 import routes from './routes/index.js';
 import cors from 'cors';
 import mongoose from 'mongoose';
-import path from 'path';
 
 dotenv.config();
 
@@ -12,13 +11,17 @@ const app = express();
 
 app.use(express.json());
 
-// Simple CORS configuration that allows all requests
+// CORS configuration
 app.use(cors({
-  origin: true, // Allow all origins
+  origin: process.env.CORS_ORIGIN || 'https://chappy-frontend.onrender.com',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Pre-flight requests
+app.options('*', cors());
 
 // API routes
 app.use('/api', routes);
@@ -46,6 +49,7 @@ const startServer = async () => {
       app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
         console.log(`MongoDB connected: ${mongoose.connection.host}`);
+        console.log(`CORS origin: ${process.env.CORS_ORIGIN || 'https://chappy-frontend.onrender.com'}`);
       });
     } else {
       console.error('Failed to connect to MongoDB. Server not started.');
