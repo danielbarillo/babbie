@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import authRoutes from './auth';
+import authRoutes from './authRoutes';
 import channelRoutes from './channelRoutes';
 import messageRoutes from './messageRoutes';
 import directMessageRoutes from './directMessageRoutes';
