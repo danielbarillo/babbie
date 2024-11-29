@@ -61,9 +61,9 @@ router.post('/register', async (req, res) => {
 
 // Login
 router.post('/login', async (req, res) => {
-  try {
-    console.log('Login request received:', req.body);
+  console.log('Login request received:', { body: req.body });
 
+  try {
     // Check MongoDB connection first
     if (mongoose.connection.readyState !== 1) {
       console.error('MongoDB not connected. Current state:', mongoose.connection.readyState);
@@ -82,8 +82,8 @@ router.post('/login', async (req, res) => {
 
     const { email, password } = req.body;
 
-    // Find user
-    const user = await User.findOne({ email });
+    // Find user and select password field
+    const user = await User.findOne({ email }).select('+password');
     console.log('User lookup result:', user ? {
       email: user.email,
       username: user.username,
@@ -120,7 +120,7 @@ router.post('/login', async (req, res) => {
         email: user.email,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Login error details:', error);
     res.status(500).json({
       message: 'Server error',

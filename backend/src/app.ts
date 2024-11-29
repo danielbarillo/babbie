@@ -9,6 +9,16 @@ dotenv.config();
 
 const app = express();
 
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path}`, {
+    body: req.body,
+    query: req.query,
+    headers: req.headers
+  });
+  next();
+});
+
 app.use(express.json());
 
 // CORS configuration
