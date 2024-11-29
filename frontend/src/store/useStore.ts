@@ -69,7 +69,7 @@ interface StoreState {
   isInitialized: boolean
 
   // Auth actions
-  login: (credentials: { email: string; password: string }) => Promise<void>
+  login: (credentials: { username: string; password: string }) => Promise<void>
   loginAsGuest: () => Promise<void>
   register: (userData: { username: string; email: string; password: string }) => Promise<void>
   logout: () => void
