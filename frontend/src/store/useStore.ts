@@ -154,7 +154,7 @@ export const useStore = create<StoreState>()(
         try {
           set({ isLoading: true, error: null });
           console.log('Attempting login with credentials:', { ...credentials, password: '[REDACTED]' });
-          const { data } = await api.post('/auth/login', credentials);
+          const { data } = await api.post('/api/auth/login', credentials);
 
           const authenticatedUser: AuthenticatedUser = {
             _id: data.user.id,

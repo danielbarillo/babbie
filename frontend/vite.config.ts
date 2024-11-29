@@ -5,8 +5,8 @@ import path from 'path'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const apiUrl = env.VITE_API_URL || (mode === 'production'
-    ? 'https://chappyv.onrender.com/api'
-    : 'http://localhost:5001/api')
+    ? 'https://chappyv.onrender.com'
+    : 'http://localhost:5001')
 
   console.log('Mode:', mode)
   console.log('API URL:', apiUrl)
