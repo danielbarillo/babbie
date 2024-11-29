@@ -1,26 +1,26 @@
-import { Router } from 'express';
+import express from 'express';
 import authRoutes from './authRoutes';
 import channelRoutes from './channelRoutes';
 import messageRoutes from './messageRoutes';
-import directMessageRoutes from './directMessageRoutes';
+import dmRoutes from './dmRoutes';
 
-const router = Router();
+const router = express.Router();
 
 // Health check
-router.get('/health', (req, res) => {
+router.get('/health', (_, res) => {
   res.json({ status: 'ok' });
 });
 
-// Auth routes (/api/auth/*)
+// Auth routes
 router.use('/auth', authRoutes);
 
-// Channel routes (/api/channels/*)
+// Channel routes
 router.use('/channels', channelRoutes);
 
-// Message routes (/api/messages/*)
+// Message routes
 router.use('/messages', messageRoutes);
 
-// Direct message routes (/api/dm/*)
-router.use('/dm', directMessageRoutes);
+// Direct message routes
+router.use('/dm', dmRoutes);
 
 export default router;

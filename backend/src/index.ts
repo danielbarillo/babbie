@@ -28,7 +28,7 @@ app.use((req, res, next) => {
 })
 
 // Routes
-app.use('/api', routes)
+app.use('/', routes)
 
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

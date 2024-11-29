@@ -34,12 +34,12 @@ app.use((req, res, next) => {
 });
 
 // Basic health check route
-app.get('/api/health', (_, res) => {
+app.get('/health', (_, res) => {
   res.json({ status: 'ok', message: 'Server is running' });
 });
 
-// API routes
-app.use('/api', routes);
+// Routes
+app.use('/', routes);
 
 // 404 handler - must be before error handler
 app.use((req, res) => {
