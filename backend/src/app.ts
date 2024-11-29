@@ -38,8 +38,8 @@ app.get('/health', (_, res) => {
   res.json({ status: 'ok', message: 'Server is running' });
 });
 
-// Mount routes directly
-app.use('/', routes);
+// Mount routes directly at root level
+app.use(routes);
 
 // 404 handler - must be before error handler
 app.use((req, res) => {
