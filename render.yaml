@@ -23,5 +23,8 @@ services:
   - type: static
     name: chappy-frontend
     rootDirectory: frontend
-    buildCommand: VITE_API_URL=https://chappy.onrender.com/api npm install && VITE_API_URL=https://chappy.onrender.com/api npm run build
+    buildCommand: npm install && VITE_API_URL=https://chappy.onrender.com/api npm run build
     staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://chappy.onrender.com/api
