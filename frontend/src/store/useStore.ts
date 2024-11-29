@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import api from '../api/axios';
 
 interface ApiError extends Error {
   response?: {
@@ -94,7 +95,9 @@ interface StoreState {
 
 const API_URL = import.meta.env.VITE_API_URL;
 
+console.log('Environment:', import.meta.env.MODE);
 console.log('API URL:', API_URL);
+console.log('Base URL from axios:', api.defaults.baseURL);
 
 if (!API_URL) {
   console.error('VITE_API_URL is not defined!')
@@ -104,17 +107,6 @@ if (!API_URL) {
 const isAuthenticated = (userState: UserState | null): userState is AuthenticatedUser => {
   return userState?.type === 'authenticated'
 }
-
-// Add a helper function to get auth headers
-const getAuthHeaders = (token: string | null): HeadersInit => {
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json'
-  };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  return headers;
-};
 
 export const useStore = create<StoreState>()(
   persist(
@@ -132,57 +124,36 @@ export const useStore = create<StoreState>()(
       isInitialized: false,
 
       checkAuth: async () => {
-        const { userState, token } = get()
+        const { userState, token } = get();
         if (!isAuthenticated(userState) || !token) {
-          set({ isInitialized: true })
-          return false
+          set({ isInitialized: true });
+          return false;
         }
 
         try {
-          const response = await fetch(`${API_URL}/auth/me`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-            },
-          })
-
-          if (!response.ok) {
-            get().logout()
-            set({ isInitialized: true })
-            return false
-          }
-
-          set({ isInitialized: true })
+          const { data } = await api.get('/auth/me');
+          set({ isInitialized: true });
 
           // Fetch channels after verifying auth
-          const store = get()
-          await store.fetchChannels()
+          const store = get();
+          await store.fetchChannels();
 
           if (store.channels.length > 0 && !store.currentChannel) {
-            await store.joinChannel(store.channels[0]._id)
+            await store.joinChannel(store.channels[0]._id);
           }
 
-          return true
+          return true;
         } catch (error) {
-          get().logout()
-          set({ isInitialized: true })
-          return false
+          get().logout();
+          set({ isInitialized: true });
+          return false;
         }
       },
 
       login: async (credentials) => {
         try {
           set({ isLoading: true, error: null });
-          const response = await fetch(`${API_URL}/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(credentials),
-          });
-
-          const data = await response.json();
-
-          if (!response.ok) {
-            throw new Error(data.message || 'Login failed');
-          }
+          const { data } = await api.post('/auth/login', credentials);
 
           const authenticatedUser: AuthenticatedUser = {
             _id: data.user.id,
@@ -199,15 +170,15 @@ export const useStore = create<StoreState>()(
             isInitialized: true
           });
 
+          // Store token in localStorage for axios interceptor
+          localStorage.setItem('token', data.token);
+
           // Fetch channels after login
           const store = get();
           await store.fetchChannels();
 
-          // Only try to join if we have channels
-          const { channels } = store;
-          if (channels && channels.length > 0) {
-            console.log('Joining first channel:', channels[0]._id);
-            await store.joinChannel(channels[0]._id);
+          if (store.channels.length > 0) {
+            await store.joinChannel(store.channels[0]._id);
           }
         } catch (error) {
           const apiError = error as ApiError;
@@ -259,49 +230,41 @@ export const useStore = create<StoreState>()(
 
       register: async (userData) => {
         try {
-          set({ isLoading: true, error: null })
-          const response = await fetch(`${API_URL}/auth/register`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(userData),
-          })
-
-          const data = await response.json()
-
-          if (!response.ok) {
-            throw new Error(data.message || 'Registration failed')
-          }
+          set({ isLoading: true, error: null });
+          const { data } = await api.post('/auth/register', userData);
 
           const authenticatedUser: AuthenticatedUser = {
-            _id: data.user._id,
+            _id: data.user.id,
             username: data.user.username,
             email: data.user.email,
             type: 'authenticated'
-          }
+          };
 
           set({
             userState: authenticatedUser,
+            token: data.token,
             isLoading: false,
             error: null,
             isInitialized: true
-          })
+          });
 
-          // Fetch channels after registration
-          const store = get()
-          await store.fetchChannels()
+          localStorage.setItem('token', data.token);
+
+          const store = get();
+          await store.fetchChannels();
 
           if (store.channels.length > 0) {
-            await store.joinChannel(store.channels[0]._id)
+            await store.joinChannel(store.channels[0]._id);
           }
         } catch (error) {
-          const apiError = error as ApiError
-          const errorMessage = apiError.response?.data?.message || apiError.message
+          const apiError = error as ApiError;
+          const errorMessage = apiError.response?.data?.message || apiError.message;
           set({
             error: errorMessage,
             isLoading: false,
             userState: null
-          })
-          throw new Error(errorMessage)
+          });
+          throw new Error(errorMessage);
         }
       },
 
@@ -321,68 +284,34 @@ export const useStore = create<StoreState>()(
 
       fetchChannels: async () => {
         try {
-          set({ isLoading: true, error: null })
-          const { userState, token } = get()
-
-          const headers: HeadersInit = {}
-          if (isAuthenticated(userState)) {
-            headers['Authorization'] = `Bearer ${token}`
-          }
-
-          const response = await fetch(`${API_URL}/channels`, { headers })
-
-          if (!response.ok) {
-            const data = await response.json()
-            throw new Error(data.message || 'Failed to fetch channels')
-          }
-
-          const data = await response.json()
-          set({ channels: data, isLoading: false })
+          set({ isLoading: true, error: null });
+          const { data } = await api.get('/channels');
+          set({ channels: data, isLoading: false });
         } catch (error) {
-          const apiError = error as ApiError
+          const apiError = error as ApiError;
           set({
-            error: apiError.message || 'Failed to fetch channels',
+            error: apiError.response?.data?.message || 'Failed to fetch channels',
             isLoading: false
-          })
+          });
         }
       },
 
       createChannel: async (channelData) => {
-        const { userState, token } = get()
-        if (!isAuthenticated(userState)) {
-          set({ error: 'Authentication required' })
-          return
-        }
-
         try {
-          set({ isLoading: true, error: null })
-          const response = await fetch(`${API_URL}/channels`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(channelData)
-          })
-
-          if (!response.ok) {
-            const data = await response.json()
-            throw new Error(data.message || 'Failed to create channel')
-          }
-
-          const newChannel = await response.json()
+          set({ isLoading: true, error: null });
+          const { data: newChannel } = await api.post('/channels', channelData);
           set(state => ({
             channels: [...state.channels, newChannel],
             currentChannel: newChannel,
             isLoading: false
-          }))
+          }));
         } catch (error) {
-          const apiError = error as ApiError
+          const apiError = error as ApiError;
           set({
-            error: apiError.message || 'Failed to create channel',
+            error: apiError.response?.data?.message || 'Failed to create channel',
             isLoading: false
-          })
-          throw error
+          });
+          throw error;
         }
       },
 
@@ -394,228 +323,117 @@ export const useStore = create<StoreState>()(
           }
 
           set({ isLoading: true, error: null });
-          const { userState, token, channels } = get();
+          const { channels } = get();
 
-          // Find the channel in our local state
           const channel = channels.find(c => c._id === channelId);
           if (!channel) {
             console.log('Channel not found in local state:', channelId);
             return;
           }
 
-          const headers: HeadersInit = {
-            'Content-Type': 'application/json'
-          };
-          if (isAuthenticated(userState)) {
-            headers['Authorization'] = `Bearer ${token}`;
-          }
-
-          const response = await fetch(`${API_URL}/channels/${channelId}/join`, {
-            method: 'POST',
-            headers
-          });
-
-          if (!response.ok) {
-            const data = await response.json();
-            throw new Error(data.message || 'Failed to join channel');
-          }
-
+          await api.post(`/channels/${channelId}/join`);
           set({ currentChannel: channel, isLoading: false });
           await get().fetchMessages(channelId);
         } catch (error) {
           const apiError = error as ApiError;
           set({
-            error: apiError.message || 'Failed to join channel',
+            error: apiError.response?.data?.message || 'Failed to join channel',
             isLoading: false
           });
         }
       },
 
       leaveChannel: async (channelId) => {
-        const { userState, token } = get()
-        if (!isAuthenticated(userState)) {
-          set({ error: 'Authentication required' })
-          return
-        }
-
         try {
-          set({ isLoading: true, error: null })
-          const response = await fetch(`${API_URL}/channels/${channelId}/leave`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          })
-
-          if (!response.ok) {
-            const data = await response.json()
-            throw new Error(data.message || 'Failed to leave channel')
-          }
+          set({ isLoading: true, error: null });
+          await api.post(`/channels/${channelId}/leave`);
 
           set(state => ({
             channels: state.channels.filter(ch => ch._id !== channelId),
             currentChannel: state.currentChannel?._id === channelId ? null : state.currentChannel,
             isLoading: false
-          }))
+          }));
         } catch (error) {
-          const apiError = error as ApiError
+          const apiError = error as ApiError;
           set({
-            error: apiError.message || 'Failed to leave channel',
+            error: apiError.response?.data?.message || 'Failed to leave channel',
             isLoading: false
-          })
+          });
         }
       },
 
       sendMessage: async (content) => {
-        const { userState, currentChannel, token } = get()
+        const { currentChannel } = get();
         if (!currentChannel) {
-          set({ error: 'No channel selected' })
-          return
-        }
-
-        try {
-          set({ isLoading: true, error: null })
-          const headers: HeadersInit = {
-            'Content-Type': 'application/json'
-          }
-          if (isAuthenticated(userState)) {
-            headers['Authorization'] = `Bearer ${token}`
-          }
-
-          const response = await fetch(`${API_URL}/messages/channel/${currentChannel._id}`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ content })
-          })
-
-          if (!response.ok) {
-            const data = await response.json()
-            throw new Error(data.message || 'Failed to send message')
-          }
-
-          const data = await response.json()
-          set(state => ({
-            messages: [...state.messages, data],
-            isLoading: false
-          }))
-        } catch (error) {
-          const apiError = error as ApiError
-          set({
-            error: apiError.message || 'Failed to send message',
-            isLoading: false
-          })
-        }
-      },
-
-      fetchMessages: async (channelId) => {
-        try {
-          set({ isLoading: true, error: null })
-          const { userState, token } = get()
-
-          const headers: HeadersInit = {}
-          if (isAuthenticated(userState)) {
-            headers['Authorization'] = `Bearer ${token}`
-          }
-
-          const response = await fetch(`${API_URL}/messages/channel/${channelId}`, { headers })
-
-          if (!response.ok) {
-            const data = await response.json()
-            throw new Error(data.message || 'Failed to fetch messages')
-          }
-
-          const data = await response.json()
-          set({ messages: data, isLoading: false })
-        } catch (error) {
-          const apiError = error as ApiError
-          set({
-            error: apiError.message || 'Failed to fetch messages',
-            isLoading: false
-          })
-        }
-      },
-
-      fetchConversations: async () => {
-        const { userState, token } = get();
-        if (!isAuthenticated(userState) || !token) {
-          set({ error: 'Authentication required' });
+          set({ error: 'No channel selected' });
           return;
         }
 
         try {
           set({ isLoading: true, error: null });
-          const response = await fetch(`${API_URL}/dm/conversations`, {
-            headers: getAuthHeaders(token)
+          const { data } = await api.post(`/messages/channel/${currentChannel._id}`, { content });
+          set(state => ({
+            messages: [...state.messages, data],
+            isLoading: false
+          }));
+        } catch (error) {
+          const apiError = error as ApiError;
+          set({
+            error: apiError.response?.data?.message || 'Failed to send message',
+            isLoading: false
           });
+        }
+      },
 
-          if (!response.ok) {
-            const data = await response.json();
-            throw new Error(data.message || 'Failed to fetch conversations');
-          }
+      fetchMessages: async (channelId) => {
+        try {
+          set({ isLoading: true, error: null });
+          const { data } = await api.get(`/messages/channel/${channelId}`);
+          set({ messages: data, isLoading: false });
+        } catch (error) {
+          const apiError = error as ApiError;
+          set({
+            error: apiError.response?.data?.message || 'Failed to fetch messages',
+            isLoading: false
+          });
+        }
+      },
 
-          const data = await response.json();
+      fetchConversations: async () => {
+        try {
+          set({ isLoading: true, error: null });
+          const { data } = await api.get('/dm/conversations');
           set({ conversations: data, isLoading: false });
         } catch (error) {
           console.error('Fetch conversations error:', error);
           const apiError = error as ApiError;
           set({
-            error: apiError.message || 'Failed to fetch conversations',
+            error: apiError.response?.data?.message || 'Failed to fetch conversations',
             isLoading: false
           });
         }
       },
 
       fetchDirectMessages: async (userId: string) => {
-        const { userState, token } = get();
-        if (!isAuthenticated(userState) || !token) {
-          set({ error: 'Authentication required' });
-          return;
-        }
-
         try {
           set({ isLoading: true, error: null });
-          const response = await fetch(`${API_URL}/dm/${userId}`, {
-            headers: getAuthHeaders(token)
-          });
-
-          if (!response.ok) {
-            const data = await response.json();
-            throw new Error(data.message || 'Failed to fetch messages');
-          }
-
-          const data = await response.json();
+          const { data } = await api.get(`/dm/${userId}`);
           set({ directMessages: data, isLoading: false });
         } catch (error) {
           console.error('Fetch direct messages error:', error);
           const apiError = error as ApiError;
           set({
-            error: apiError.message || 'Failed to fetch messages',
+            error: apiError.response?.data?.message || 'Failed to fetch messages',
             isLoading: false
           });
         }
       },
 
       sendDirectMessage: async (content: string, recipientId: string) => {
-        const { userState, token } = get();
-        if (!isAuthenticated(userState) || !token) {
-          set({ error: 'Authentication required' });
-          return;
-        }
-
         try {
           set({ isLoading: true, error: null });
-          const response = await fetch(`${API_URL}/dm`, {
-            method: 'POST',
-            headers: getAuthHeaders(token),
-            body: JSON.stringify({ content, recipientId })
-          });
+          const { data: message } = await api.post('/dm', { content, recipientId });
 
-          if (!response.ok) {
-            const data = await response.json();
-            throw new Error(data.message || 'Failed to send message');
-          }
-
-          const message = await response.json();
           set(state => ({
             directMessages: [...state.directMessages, message],
             isLoading: false
@@ -626,7 +444,7 @@ export const useStore = create<StoreState>()(
           console.error('Send direct message error:', error);
           const apiError = error as ApiError;
           set({
-            error: apiError.message || 'Failed to send message',
+            error: apiError.response?.data?.message || 'Failed to send message',
             isLoading: false
           });
         }
