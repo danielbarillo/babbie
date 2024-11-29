@@ -13,7 +13,15 @@ const app = express();
 app.use(express.json());
 
 // CORS configuration
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'https://chappy-frontend.onrender.com'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // Request logging middleware (AFTER body parsing)
 app.use((req, res, next) => {
