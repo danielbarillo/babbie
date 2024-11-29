@@ -27,7 +27,7 @@ services:
     staticPublishPath: dist
     envVars:
       - key: VITE_API_URL
-        value: https://chappyv.onrender.com/api
+        value: https://chappyv.onrender.com
     headers:
       - path: /*
         name: Cache-Control
