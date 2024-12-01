@@ -141,7 +141,7 @@ export const useStore = create<StoreState>()(
           }
 
           const authenticatedUser: AuthenticatedUser = {
-            _id: data.user.id,
+            _id: data.user._id,
             username: data.user.username,
             email: data.user.email,
             type: 'authenticated'
@@ -157,10 +157,10 @@ export const useStore = create<StoreState>()(
             isLoading: false,
             error: null,
             isInitialized: true,
-            channels: [], // Reset channels
-            messages: [], // Reset messages
-            conversations: [], // Reset conversations
-            currentChannel: null // Reset current channel
+            channels: [],
+            messages: [],
+            conversations: [],
+            currentChannel: null
           });
 
           // Store token in localStorage
@@ -169,17 +169,9 @@ export const useStore = create<StoreState>()(
           // Fetch initial data
           await get().fetchChannels();
           await get().fetchConversations();
-
-          // Join first available channel if none is selected
-          const { channels, currentChannel } = get();
-          if (channels && channels.length > 0 && !currentChannel) {
-            await get().joinChannel(channels[0]._id);
-          }
-
         } catch (error: any) {
           console.error('Login error:', error);
           const errorMessage = error.response?.data?.message || error.message || 'Failed to login';
-
           set({
             error: errorMessage,
             isLoading: false,
@@ -190,7 +182,6 @@ export const useStore = create<StoreState>()(
             conversations: [],
             currentChannel: null
           });
-
           throw new Error(errorMessage);
         }
       },
@@ -270,9 +261,7 @@ export const useStore = create<StoreState>()(
       fetchChannels: async () => {
         try {
           const { data } = await api.get('/channels');
-          // Handle both array and object response formats
-          const channelsArray = Array.isArray(data) ? data : data.channels || [];
-          set({ channels: channelsArray });
+          set({ channels: data || [] });
         } catch (error) {
           console.error('Failed to fetch channels:', error);
           set({ channels: [] });
@@ -282,11 +271,10 @@ export const useStore = create<StoreState>()(
       createChannel: async (channelData) => {
         try {
           const { data } = await api.post('/channels', channelData);
-          const newChannel = data.channel || data;
           set((state) => ({
-            channels: [...state.channels, newChannel]
+            channels: [...state.channels, data]
           }));
-          return newChannel;
+          return data;
         } catch (error) {
           console.error('Failed to create channel:', error);
           throw error;
@@ -297,8 +285,7 @@ export const useStore = create<StoreState>()(
         if (!channelId) return;
         try {
           const { data } = await api.post(`/channels/${channelId}/join`);
-          const channel = data.channel || data;
-          set({ currentChannel: channel });
+          set({ currentChannel: data });
           await get().fetchMessages(channelId);
         } catch (error) {
           console.error('Failed to join channel:', error);
@@ -323,9 +310,13 @@ export const useStore = create<StoreState>()(
         if (!currentChannel) return;
 
         try {
-          const { data } = await api.post(`/messages/${currentChannel._id}`, { content });
+          const { data } = await api.post('/messages', {
+            content,
+            channelId: currentChannel._id
+          });
+
           set((state) => ({
-            messages: [...state.messages, data.message]
+            messages: [...state.messages, data]
           }));
         } catch (error) {
           console.error('Failed to send message:', error);
@@ -335,38 +326,42 @@ export const useStore = create<StoreState>()(
 
       fetchMessages: async (channelId) => {
         try {
-          const { data } = await api.get(`/messages/${channelId}`);
-          set({ messages: data.messages });
+          const { data } = await api.get(`/messages?channelId=${channelId}`);
+          set({ messages: data || [] });
         } catch (error) {
           console.error('Failed to fetch messages:', error);
+          set({ messages: [] });
         }
       },
 
       // DM actions
       fetchConversations: async () => {
         try {
-          const { data } = await api.get('/dm/conversations');
-          set({ conversations: data.conversations });
+          const { data } = await api.get('/conversations');
+          set({ conversations: data || [] });
         } catch (error) {
           console.error('Failed to fetch conversations:', error);
+          set({ conversations: [] });
         }
       },
 
       fetchDirectMessages: async (userId) => {
         try {
-          const { data } = await api.get(`/dm/${userId}`);
-          set({ directMessages: data.messages });
+          const { data } = await api.get(`/conversations/${userId}/messages`);
+          set({ directMessages: data || [] });
         } catch (error) {
           console.error('Failed to fetch direct messages:', error);
+          set({ directMessages: [] });
         }
       },
 
       sendDirectMessage: async (content, recipientId) => {
         try {
-          const { data } = await api.post('/dm', { content, recipientId });
+          const { data } = await api.post(`/conversations/${recipientId}/messages`, { content });
           set((state) => ({
-            directMessages: [...state.directMessages, data.message]
+            directMessages: [...state.directMessages, data]
           }));
+          await get().fetchConversations();
         } catch (error) {
           console.error('Failed to send direct message:', error);
           throw error;
@@ -375,6 +370,9 @@ export const useStore = create<StoreState>()(
 
       setCurrentConversation: (conversation) => {
         set({ currentConversation: conversation });
+        if (conversation) {
+          get().fetchDirectMessages(conversation._id);
+        }
       },
 
       register: async (userData) => {
