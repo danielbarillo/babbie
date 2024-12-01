@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useStore } from "../store/useStore";
 import { ScrollArea } from "./ui/scroll-area";
 import { Button } from "./ui/button";
@@ -17,11 +17,21 @@ export function Sidebar({ onClose }: SidebarProps) {
     joinChannel,
     error,
     isLoading,
-    userState
+    userState,
+    fetchChannels,
+    fetchConversations
   } = useStore();
   const navigate = useNavigate();
 
   const isAuthenticated = userState?.type === 'authenticated';
+
+  useEffect(() => {
+    // Fetch initial data
+    fetchChannels().catch(console.error);
+    if (isAuthenticated) {
+      fetchConversations().catch(console.error);
+    }
+  }, [fetchChannels, fetchConversations, isAuthenticated]);
 
   return (
     <aside className="w-full h-full border-r bg-background flex flex-col">
@@ -66,7 +76,7 @@ export function Sidebar({ onClose }: SidebarProps) {
             <div className="space-y-1">
               {isLoading ? (
                 <div className="text-sm text-muted-foreground p-2">Loading channels...</div>
-              ) : channels.length === 0 ? (
+              ) : !channels || channels.length === 0 ? (
                 <div className="text-sm text-muted-foreground p-2">No channels yet</div>
               ) : (
                 channels.map((channel) => (
@@ -115,7 +125,7 @@ export function Sidebar({ onClose }: SidebarProps) {
               </div>
 
               <div className="p-4 space-y-1">
-                {conversations.length === 0 ? (
+                {!conversations || conversations.length === 0 ? (
                   <div className="text-sm text-muted-foreground p-2">
                     No conversations yet
                   </div>

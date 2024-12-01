@@ -165,6 +165,17 @@ export const useStore = create<StoreState>()(
           localStorage.setItem('token', data.token);
           console.log('Login successful, user state updated');
 
+          // Fetch initial data
+          const store = get();
+          await store.fetchChannels();
+          await store.fetchConversations();
+
+          // Join first available channel if none is selected
+          const channels = get().channels;
+          if (channels.length > 0 && !get().currentChannel) {
+            await store.joinChannel(channels[0]._id);
+          }
+
         } catch (error) {
           const apiError = error as ApiError;
           const errorMessage = apiError.response?.data?.message || apiError.message;
