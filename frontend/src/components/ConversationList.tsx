@@ -7,7 +7,7 @@ import { format } from 'date-fns';
 
 export function ConversationList() {
   const {
-    conversations,
+    conversations = [],
     currentConversation,
     setCurrentConversation,
     fetchConversations,

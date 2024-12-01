@@ -270,19 +270,23 @@ export const useStore = create<StoreState>()(
       fetchChannels: async () => {
         try {
           const { data } = await api.get('/channels');
-          set({ channels: data.channels });
+          // Handle both array and object response formats
+          const channelsArray = Array.isArray(data) ? data : data.channels || [];
+          set({ channels: channelsArray });
         } catch (error) {
           console.error('Failed to fetch channels:', error);
+          set({ channels: [] });
         }
       },
 
       createChannel: async (channelData) => {
         try {
           const { data } = await api.post('/channels', channelData);
+          const newChannel = data.channel || data;
           set((state) => ({
-            channels: [...state.channels, data.channel]
+            channels: [...state.channels, newChannel]
           }));
-          return data.channel;
+          return newChannel;
         } catch (error) {
           console.error('Failed to create channel:', error);
           throw error;
@@ -293,7 +297,8 @@ export const useStore = create<StoreState>()(
         if (!channelId) return;
         try {
           const { data } = await api.post(`/channels/${channelId}/join`);
-          set({ currentChannel: data.channel });
+          const channel = data.channel || data;
+          set({ currentChannel: channel });
           await get().fetchMessages(channelId);
         } catch (error) {
           console.error('Failed to join channel:', error);
