@@ -1,38 +1,41 @@
-import { useState, FormEvent } from 'react';
-import { useStore } from '../store/useStore';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Send } from 'lucide-react';
+import React, { useState } from "react";
+import { useStore } from "../store/useStore";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Send } from "lucide-react";
 
 export function MessageInput() {
-  const [content, setContent] = useState('');
-  const { sendMessage, isLoading } = useStore();
+  const [message, setMessage] = useState("");
+  const { sendMessage, currentChannel } = useStore();
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!content.trim() || isLoading) return;
+    if (!message.trim() || !currentChannel) return;
 
     try {
-      await sendMessage(content);
-      setContent('');
+      await sendMessage(currentChannel._id, message.trim());
+      setMessage("");
     } catch (error) {
-      console.error('Failed to send message:', error);
+      console.error("Failed to send message:", error);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="border-t p-4 bg-background">
-      <div className="flex gap-2">
+    <form onSubmit={handleSubmit} className="p-2 md:p-4 border-t bg-background">
+      <div className="max-w-4xl mx-auto flex gap-2">
         <Input
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="Type a message..."
-          disabled={isLoading}
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder="Type your message..."
           className="flex-1"
         />
-        <Button type="submit" disabled={isLoading || !content.trim()}>
+        <Button
+          type="submit"
+          size="icon"
+          disabled={!message.trim()}
+          className="shrink-0"
+        >
           <Send className="h-4 w-4" />
-          <span className="sr-only">Send message</span>
         </Button>
       </div>
     </form>
