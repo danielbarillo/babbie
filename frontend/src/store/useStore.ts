@@ -342,6 +342,57 @@ export const useStore = create<StoreState>()(
 
       setCurrentConversation: (conversation) => {
         set({ currentConversation: conversation });
+      },
+
+      register: async (userData) => {
+        try {
+          set({ isLoading: true, error: null });
+          console.log('Attempting registration:', { ...userData, password: '[REDACTED]' });
+
+          const { data } = await api.post('/auth/register', userData);
+          console.log('Registration response:', data);
+
+          if (!data.token || !data.user) {
+            throw new Error('Invalid response from server');
+          }
+
+          const authenticatedUser: AuthenticatedUser = {
+            _id: data.user.id,
+            username: data.user.username,
+            email: data.user.email,
+            type: 'authenticated'
+          };
+
+          // Update axios default headers
+          api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+
+          // Update store state
+          set({
+            userState: authenticatedUser,
+            token: data.token,
+            isLoading: false,
+            error: null,
+            isInitialized: true
+          });
+
+          // Store token in localStorage
+          localStorage.setItem('token', data.token);
+          console.log('Registration successful, user state updated');
+
+        } catch (error) {
+          const apiError = error as ApiError;
+          const errorMessage = apiError.response?.data?.message || apiError.message;
+          console.error('Registration error:', errorMessage);
+
+          set({
+            error: errorMessage,
+            isLoading: false,
+            userState: null,
+            token: null
+          });
+
+          throw new Error(errorMessage);
+        }
       }
     }),
     {
