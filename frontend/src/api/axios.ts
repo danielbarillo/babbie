@@ -7,10 +7,19 @@ console.log('Axios config - API URL:', API_URL);
 
 const api = axios.create({
   baseURL: API_URL,
+  timeout: 30000, // 30 second timeout
   headers: {
     'Content-Type': 'application/json'
-  }
+  },
+  // Ensure credentials are sent with requests
+  withCredentials: true
 });
+
+// Initialize token from localStorage if it exists
+const token = localStorage.getItem('token');
+if (token) {
+  api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+}
 
 // Add a request interceptor to add the token and log the request
 api.interceptors.request.use(
@@ -57,6 +66,31 @@ api.interceptors.response.use(
         fullURL: `${error.config?.baseURL}${error.config?.url}`,
       }
     });
+
+    // Handle authentication errors
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      // Clear token and auth header
+      localStorage.removeItem('token');
+      delete api.defaults.headers.common['Authorization'];
+
+      // Redirect to login if needed
+      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+        window.location.href = '/login';
+      }
+    }
+
+    // Handle network errors
+    if (!error.response) {
+      console.error('Network error:', error.message);
+      return Promise.reject(new Error('Network error. Please check your connection.'));
+    }
+
+    // Handle server errors
+    if (error.response.status >= 500) {
+      console.error('Server error:', error.response.data);
+      return Promise.reject(new Error('Server error. Please try again later.'));
+    }
+
     return Promise.reject(error);
   }
 );

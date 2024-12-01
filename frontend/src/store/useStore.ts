@@ -114,19 +114,60 @@ export const useStore = create<StoreState>()(
       isInitialized: false,
 
       checkAuth: async () => {
-        const { userState, token } = get();
-        if (!isAuthenticated(userState) || !token) {
-          set({ isInitialized: true });
-          return false;
-        }
-
         try {
+          const token = localStorage.getItem('token');
+          if (!token) {
+            set({ isInitialized: true });
+            return false;
+          }
+
+          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
           const { data } = await api.get('/auth/me');
-          set({ isInitialized: true });
+
+          if (!data || !data.user) {
+            throw new Error('Invalid response from server');
+          }
+
+          const authenticatedUser: AuthenticatedUser = {
+            _id: data.user._id,
+            username: data.user.username,
+            email: data.user.email,
+            type: 'authenticated'
+          };
+
+          set({
+            userState: authenticatedUser,
+            token,
+            isLoading: false,
+            error: null,
+            isInitialized: true
+          });
+
+          // Fetch initial data
+          await get().fetchChannels();
+          await get().fetchConversations();
+
           return true;
         } catch (error) {
-          get().logout();
-          set({ isInitialized: true });
+          console.error('Auth check error:', error);
+          // Clear any invalid auth state
+          localStorage.removeItem('token');
+          delete api.defaults.headers.common['Authorization'];
+
+          set({
+            userState: null,
+            token: null,
+            error: null,
+            isLoading: false,
+            isInitialized: true,
+            channels: [],
+            messages: [],
+            conversations: [],
+            currentChannel: null,
+            currentConversation: null,
+            directMessages: []
+          });
+
           return false;
         }
       },
@@ -150,6 +191,9 @@ export const useStore = create<StoreState>()(
           // Update axios default headers
           api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
 
+          // Store token in localStorage
+          localStorage.setItem('token', data.token);
+
           // Update store state
           set({
             userState: authenticatedUser,
@@ -160,11 +204,10 @@ export const useStore = create<StoreState>()(
             channels: [],
             messages: [],
             conversations: [],
-            currentChannel: null
+            currentChannel: null,
+            currentConversation: null,
+            directMessages: []
           });
-
-          // Store token in localStorage
-          localStorage.setItem('token', data.token);
 
           // Fetch initial data
           await get().fetchChannels();
@@ -172,6 +215,11 @@ export const useStore = create<StoreState>()(
         } catch (error: any) {
           console.error('Login error:', error);
           const errorMessage = error.response?.data?.message || error.message || 'Failed to login';
+
+          // Clear any invalid auth state
+          localStorage.removeItem('token');
+          delete api.defaults.headers.common['Authorization'];
+
           set({
             error: errorMessage,
             isLoading: false,
@@ -180,8 +228,11 @@ export const useStore = create<StoreState>()(
             channels: [],
             messages: [],
             conversations: [],
-            currentChannel: null
+            currentChannel: null,
+            currentConversation: null,
+            directMessages: []
           });
+
           throw new Error(errorMessage);
         }
       },
@@ -205,10 +256,12 @@ export const useStore = create<StoreState>()(
             isLoading: false,
             error: null,
             isInitialized: true,
-            channels: [], // Reset channels
-            messages: [], // Reset messages
-            conversations: [], // Reset conversations
-            currentChannel: null // Reset current channel
+            channels: [],
+            messages: [],
+            conversations: [],
+            currentChannel: null,
+            currentConversation: null,
+            directMessages: []
           });
 
           // Fetch public channels for guest
@@ -226,7 +279,9 @@ export const useStore = create<StoreState>()(
             channels: [],
             messages: [],
             conversations: [],
-            currentChannel: null
+            currentChannel: null,
+            currentConversation: null,
+            directMessages: []
           });
 
           throw new Error(errorMessage);
@@ -235,10 +290,13 @@ export const useStore = create<StoreState>()(
 
       logout: () => {
         console.log('Logging out...');
+
         // Clear auth header
         delete api.defaults.headers.common['Authorization'];
+
         // Clear localStorage
         localStorage.removeItem('token');
+
         // Reset store state
         set({
           userState: null,
@@ -250,8 +308,10 @@ export const useStore = create<StoreState>()(
           messages: [],
           directMessages: [],
           conversations: [],
-          isLoading: false
+          isLoading: false,
+          isInitialized: true
         });
+
         console.log('Logout complete');
       },
 
@@ -310,9 +370,8 @@ export const useStore = create<StoreState>()(
         if (!currentChannel) return;
 
         try {
-          const { data } = await api.post('/messages', {
-            content,
-            channelId: currentChannel._id
+          const { data } = await api.post(`/messages/channel/${currentChannel._id}`, {
+            content
           });
 
           set((state) => ({
@@ -326,7 +385,7 @@ export const useStore = create<StoreState>()(
 
       fetchMessages: async (channelId) => {
         try {
-          const { data } = await api.get(`/messages?channelId=${channelId}`);
+          const { data } = await api.get(`/messages/channel/${channelId}`);
           set({ messages: data || [] });
         } catch (error) {
           console.error('Failed to fetch messages:', error);
@@ -337,7 +396,7 @@ export const useStore = create<StoreState>()(
       // DM actions
       fetchConversations: async () => {
         try {
-          const { data } = await api.get('/conversations');
+          const { data } = await api.get('/dm/conversations');
           set({ conversations: data || [] });
         } catch (error) {
           console.error('Failed to fetch conversations:', error);
@@ -347,7 +406,7 @@ export const useStore = create<StoreState>()(
 
       fetchDirectMessages: async (userId) => {
         try {
-          const { data } = await api.get(`/conversations/${userId}/messages`);
+          const { data } = await api.get(`/dm/${userId}`);
           set({ directMessages: data || [] });
         } catch (error) {
           console.error('Failed to fetch direct messages:', error);
@@ -357,7 +416,7 @@ export const useStore = create<StoreState>()(
 
       sendDirectMessage: async (content, recipientId) => {
         try {
-          const { data } = await api.post(`/conversations/${recipientId}/messages`, { content });
+          const { data } = await api.post('/dm', { content, recipientId });
           set((state) => ({
             directMessages: [...state.directMessages, data]
           }));
@@ -403,12 +462,22 @@ export const useStore = create<StoreState>()(
             token: data.token,
             isLoading: false,
             error: null,
-            isInitialized: true
+            isInitialized: true,
+            channels: [],
+            messages: [],
+            conversations: [],
+            currentChannel: null,
+            currentConversation: null,
+            directMessages: []
           });
 
           // Store token in localStorage
           localStorage.setItem('token', data.token);
           console.log('Registration successful, user state updated');
+
+          // Fetch initial data
+          await get().fetchChannels();
+          await get().fetchConversations();
 
         } catch (error) {
           const apiError = error as ApiError;
@@ -419,7 +488,13 @@ export const useStore = create<StoreState>()(
             error: errorMessage,
             isLoading: false,
             userState: null,
-            token: null
+            token: null,
+            channels: [],
+            messages: [],
+            conversations: [],
+            currentChannel: null,
+            currentConversation: null,
+            directMessages: []
           });
 
           throw new Error(errorMessage);
