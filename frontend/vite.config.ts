@@ -3,14 +3,10 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '')
-  const apiUrl = env.VITE_API_URL || (mode === 'production'
-    ? 'https://chappyv.onrender.com'
-    : 'http://localhost:5001')
+  const apiUrl = 'https://chappyv.onrender.com';
 
   console.log('Mode:', mode)
-  console.log('API URL from env:', env.VITE_API_URL)
-  console.log('Final API URL:', apiUrl)
+  console.log('Forced API URL:', apiUrl)
 
   return {
     plugins: [react()],
