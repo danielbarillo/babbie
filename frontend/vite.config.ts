@@ -9,7 +9,8 @@ export default defineConfig(({ mode }) => {
     : 'http://localhost:5001')
 
   console.log('Mode:', mode)
-  console.log('API URL:', apiUrl)
+  console.log('API URL from env:', env.VITE_API_URL)
+  console.log('Final API URL:', apiUrl)
 
   return {
     plugins: [react()],
@@ -19,7 +20,8 @@ export default defineConfig(({ mode }) => {
       },
     },
     define: {
-      'import.meta.env.VITE_API_URL': JSON.stringify(apiUrl)
+      'import.meta.env.VITE_API_URL': JSON.stringify(apiUrl),
+      'import.meta.env.MODE': JSON.stringify(mode)
     },
     build: {
       outDir: 'dist',
