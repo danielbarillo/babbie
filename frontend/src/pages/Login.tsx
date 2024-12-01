@@ -5,13 +5,15 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Card } from "../components/ui/card";
 import LoadingSpinner from "../components/LoadingSpinner";
+import { useStore } from "../store/useStore";
 
 export function Login() {
   const [username, setUsername] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
-  const { login, loginAsGuest, isLoading } = useAuth();
+  const { isLoading } = useStore();
   const navigate = useNavigate();
+  const store = useStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,12 +21,12 @@ export function Login() {
 
     try {
       console.log('Attempting login with username:', username);
-      await login(username, password);
+      await store.login({ username, password });
       console.log('Login successful, navigating to home');
       navigate("/");
     } catch (err: any) {
       console.error('Login error:', err);
-      setError(err.response?.data?.message || "Invalid username or password");
+      setError(err.message || "Invalid username or password");
     }
   };
 
@@ -32,7 +34,7 @@ export function Login() {
     setError(null);
     try {
       console.log('Attempting guest login');
-      await loginAsGuest();
+      await store.loginAsGuest();
       console.log('Guest login successful, navigating to home');
       navigate("/");
     } catch (err: any) {

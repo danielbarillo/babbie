@@ -93,18 +93,6 @@ interface StoreState {
   setCurrentConversation: (conversation: Conversation | null) => void
 }
 
-const API_URL = import.meta.env.VITE_API_URL;
-
-console.log('Environment:', import.meta.env.MODE);
-console.log('API URL from env:', import.meta.env.VITE_API_URL);
-console.log('API URL const:', API_URL);
-console.log('Base URL from axios:', api.defaults.baseURL);
-
-if (!API_URL) {
-  console.error('VITE_API_URL is not defined in environment!')
-  console.error('Current environment variables:', import.meta.env)
-}
-
 // Helper function to check if user is authenticated
 const isAuthenticated = (userState: UserState | null): userState is AuthenticatedUser => {
   return userState?.type === 'authenticated'
@@ -135,15 +123,6 @@ export const useStore = create<StoreState>()(
         try {
           const { data } = await api.get('/auth/me');
           set({ isInitialized: true });
-
-          // Fetch channels after verifying auth
-          const store = get();
-          await store.fetchChannels();
-
-          if (store.channels.length > 0 && !store.currentChannel) {
-            await store.joinChannel(store.channels[0]._id);
-          }
-
           return true;
         } catch (error) {
           get().logout();
@@ -157,6 +136,11 @@ export const useStore = create<StoreState>()(
           set({ isLoading: true, error: null });
           console.log('Attempting login with credentials:', { ...credentials, password: '[REDACTED]' });
           const { data } = await api.post('/auth/login', credentials);
+          console.log('Login response:', data);
+
+          if (!data.token || !data.user) {
+            throw new Error('Invalid response from server');
+          }
 
           const authenticatedUser: AuthenticatedUser = {
             _id: data.user.id,
@@ -165,6 +149,10 @@ export const useStore = create<StoreState>()(
             type: 'authenticated'
           };
 
+          // Update axios default headers
+          api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+
+          // Update store state
           set({
             userState: authenticatedUser,
             token: data.token,
@@ -173,299 +161,195 @@ export const useStore = create<StoreState>()(
             isInitialized: true
           });
 
-          // Store token in localStorage for axios interceptor
+          // Store token in localStorage
           localStorage.setItem('token', data.token);
+          console.log('Login successful, user state updated');
 
-          // Fetch channels after login
-          const store = get();
-          await store.fetchChannels();
-
-          if (store.channels.length > 0) {
-            await store.joinChannel(store.channels[0]._id);
-          }
         } catch (error) {
           const apiError = error as ApiError;
           const errorMessage = apiError.response?.data?.message || apiError.message;
+          console.error('Login error:', errorMessage);
+
           set({
             error: errorMessage,
             isLoading: false,
             userState: null,
             token: null
           });
+
           throw new Error(errorMessage);
         }
       },
 
       loginAsGuest: async () => {
         try {
-          set({ isLoading: true, error: null })
+          set({ isLoading: true, error: null });
+          console.log('Setting up guest user');
 
           const guestUser: GuestUser = {
             type: 'guest'
-          }
-
-          set({
-            userState: guestUser,
-            isLoading: false,
-            error: null,
-            isInitialized: true
-          })
-
-          // Fetch public channels
-          const store = get()
-          await store.fetchChannels()
-
-          // Join first public channel if available
-          const publicChannels = store.channels.filter(ch => !ch.isPrivate)
-          if (publicChannels.length > 0) {
-            await store.joinChannel(publicChannels[0]._id)
-          }
-        } catch (error) {
-          const apiError = error as ApiError
-          set({
-            error: apiError.message || 'Failed to login as guest',
-            isLoading: false,
-            userState: null
-          })
-          throw new Error(apiError.message || 'Failed to login as guest')
-        }
-      },
-
-      register: async (userData) => {
-        try {
-          set({ isLoading: true, error: null });
-          const { data } = await api.post('/auth/register', userData);
-
-          const authenticatedUser: AuthenticatedUser = {
-            _id: data.user.id,
-            username: data.user.username,
-            email: data.user.email,
-            type: 'authenticated'
           };
 
           set({
-            userState: authenticatedUser,
-            token: data.token,
+            userState: guestUser,
+            token: null,
             isLoading: false,
             error: null,
             isInitialized: true
           });
 
-          localStorage.setItem('token', data.token);
-
-          const store = get();
-          await store.fetchChannels();
-
-          if (store.channels.length > 0) {
-            await store.joinChannel(store.channels[0]._id);
-          }
+          console.log('Guest login successful');
         } catch (error) {
           const apiError = error as ApiError;
-          const errorMessage = apiError.response?.data?.message || apiError.message;
+          console.error('Guest login error:', apiError);
+
           set({
-            error: errorMessage,
+            error: apiError.message || 'Failed to login as guest',
             isLoading: false,
-            userState: null
+            userState: null,
+            token: null
           });
-          throw new Error(errorMessage);
+
+          throw new Error(apiError.message || 'Failed to login as guest');
         }
       },
 
       logout: () => {
+        console.log('Logging out...');
+        // Clear auth header
+        delete api.defaults.headers.common['Authorization'];
+        // Clear localStorage
+        localStorage.removeItem('token');
+        // Reset store state
         set({
           userState: null,
           token: null,
+          error: null,
           currentChannel: null,
+          currentConversation: null,
           channels: [],
           messages: [],
-          error: null,
-          isInitialized: true
-        })
+          directMessages: [],
+          conversations: [],
+          isLoading: false
+        });
+        console.log('Logout complete');
       },
 
       clearError: () => set({ error: null }),
 
+      // Channel actions
       fetchChannels: async () => {
         try {
-          set({ isLoading: true, error: null });
           const { data } = await api.get('/channels');
-          set({ channels: data, isLoading: false });
+          set({ channels: data.channels });
         } catch (error) {
-          const apiError = error as ApiError;
-          set({
-            error: apiError.response?.data?.message || 'Failed to fetch channels',
-            isLoading: false
-          });
+          console.error('Failed to fetch channels:', error);
         }
       },
 
       createChannel: async (channelData) => {
         try {
-          set({ isLoading: true, error: null });
-          const { data: newChannel } = await api.post('/channels', channelData);
-          set(state => ({
-            channels: [...state.channels, newChannel],
-            currentChannel: newChannel,
-            isLoading: false
+          const { data } = await api.post('/channels', channelData);
+          set((state) => ({
+            channels: [...state.channels, data.channel]
           }));
+          return data.channel;
         } catch (error) {
-          const apiError = error as ApiError;
-          set({
-            error: apiError.response?.data?.message || 'Failed to create channel',
-            isLoading: false
-          });
+          console.error('Failed to create channel:', error);
           throw error;
         }
       },
 
-      joinChannel: async (channelId?: string) => {
+      joinChannel: async (channelId) => {
+        if (!channelId) return;
         try {
-          if (!channelId) {
-            console.log('No channel ID provided, skipping join');
-            return;
-          }
-
-          set({ isLoading: true, error: null });
-          const { channels } = get();
-
-          const channel = channels.find(c => c._id === channelId);
-          if (!channel) {
-            console.log('Channel not found in local state:', channelId);
-            return;
-          }
-
-          await api.post(`/channels/${channelId}/join`);
-          set({ currentChannel: channel, isLoading: false });
+          const { data } = await api.post(`/channels/${channelId}/join`);
+          set({ currentChannel: data.channel });
           await get().fetchMessages(channelId);
         } catch (error) {
-          const apiError = error as ApiError;
-          set({
-            error: apiError.response?.data?.message || 'Failed to join channel',
-            isLoading: false
-          });
+          console.error('Failed to join channel:', error);
         }
       },
 
       leaveChannel: async (channelId) => {
         try {
-          set({ isLoading: true, error: null });
           await api.post(`/channels/${channelId}/leave`);
-
-          set(state => ({
-            channels: state.channels.filter(ch => ch._id !== channelId),
+          set((state) => ({
             currentChannel: state.currentChannel?._id === channelId ? null : state.currentChannel,
-            isLoading: false
+            channels: state.channels.filter((c) => c._id !== channelId)
           }));
         } catch (error) {
-          const apiError = error as ApiError;
-          set({
-            error: apiError.response?.data?.message || 'Failed to leave channel',
-            isLoading: false
-          });
+          console.error('Failed to leave channel:', error);
         }
       },
 
+      // Message actions
       sendMessage: async (content) => {
         const { currentChannel } = get();
-        if (!currentChannel) {
-          set({ error: 'No channel selected' });
-          return;
-        }
+        if (!currentChannel) return;
 
         try {
-          set({ isLoading: true, error: null });
-          const { data } = await api.post(`/messages/channel/${currentChannel._id}`, { content });
-          set(state => ({
-            messages: [...state.messages, data],
-            isLoading: false
+          const { data } = await api.post(`/messages/${currentChannel._id}`, { content });
+          set((state) => ({
+            messages: [...state.messages, data.message]
           }));
         } catch (error) {
-          const apiError = error as ApiError;
-          set({
-            error: apiError.response?.data?.message || 'Failed to send message',
-            isLoading: false
-          });
+          console.error('Failed to send message:', error);
+          throw error;
         }
       },
 
       fetchMessages: async (channelId) => {
         try {
-          set({ isLoading: true, error: null });
-          const { data } = await api.get(`/messages/channel/${channelId}`);
-          set({ messages: data, isLoading: false });
+          const { data } = await api.get(`/messages/${channelId}`);
+          set({ messages: data.messages });
         } catch (error) {
-          const apiError = error as ApiError;
-          set({
-            error: apiError.response?.data?.message || 'Failed to fetch messages',
-            isLoading: false
-          });
+          console.error('Failed to fetch messages:', error);
         }
       },
 
+      // DM actions
       fetchConversations: async () => {
         try {
-          set({ isLoading: true, error: null });
           const { data } = await api.get('/dm/conversations');
-          set({ conversations: data, isLoading: false });
+          set({ conversations: data.conversations });
         } catch (error) {
-          console.error('Fetch conversations error:', error);
-          const apiError = error as ApiError;
-          set({
-            error: apiError.response?.data?.message || 'Failed to fetch conversations',
-            isLoading: false
-          });
+          console.error('Failed to fetch conversations:', error);
         }
       },
 
-      fetchDirectMessages: async (userId: string) => {
+      fetchDirectMessages: async (userId) => {
         try {
-          set({ isLoading: true, error: null });
           const { data } = await api.get(`/dm/${userId}`);
-          set({ directMessages: data, isLoading: false });
+          set({ directMessages: data.messages });
         } catch (error) {
-          console.error('Fetch direct messages error:', error);
-          const apiError = error as ApiError;
-          set({
-            error: apiError.response?.data?.message || 'Failed to fetch messages',
-            isLoading: false
-          });
+          console.error('Failed to fetch direct messages:', error);
         }
       },
 
-      sendDirectMessage: async (content: string, recipientId: string) => {
+      sendDirectMessage: async (content, recipientId) => {
         try {
-          set({ isLoading: true, error: null });
-          const { data: message } = await api.post('/dm', { content, recipientId });
-
-          set(state => ({
-            directMessages: [...state.directMessages, message],
-            isLoading: false
+          const { data } = await api.post('/dm', { content, recipientId });
+          set((state) => ({
+            directMessages: [...state.directMessages, data.message]
           }));
-
-          await get().fetchConversations();
         } catch (error) {
-          console.error('Send direct message error:', error);
-          const apiError = error as ApiError;
-          set({
-            error: apiError.response?.data?.message || 'Failed to send message',
-            isLoading: false
-          });
+          console.error('Failed to send direct message:', error);
+          throw error;
         }
       },
 
-      setCurrentConversation: (conversation: Conversation | null) => {
+      setCurrentConversation: (conversation) => {
         set({ currentConversation: conversation });
-        if (conversation) {
-          get().fetchDirectMessages(conversation._id);
-        }
       }
     }),
     {
-      name: 'chappy-storage',
+      name: 'chappy-store',
       partialize: (state) => ({
         userState: state.userState,
         token: state.token
       })
     }
   )
-)
+);
