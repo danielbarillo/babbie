@@ -10,8 +10,8 @@ yarn-error.log*
 .env.development
 .env.development.local
 .env.test.local
-# Keep .env.production for deployment
-#.env.production
+.env.production
+.env.production.local
 
 # Build output
 dist/

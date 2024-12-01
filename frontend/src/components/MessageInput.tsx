@@ -13,7 +13,7 @@ export function MessageInput() {
     if (!message.trim() || !currentChannel) return;
 
     try {
-      await sendMessage(currentChannel._id, message.trim());
+      await sendMessage(message.trim());
       setMessage("");
     } catch (error) {
       console.error("Failed to send message:", error);
