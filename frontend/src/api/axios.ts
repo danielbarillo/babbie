@@ -1,15 +1,11 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL;
+// Force the correct API URL
+const API_URL = 'https://chappyv.onrender.com';
 
 console.log('Axios config - API URL:', API_URL);
 console.log('Axios config - Environment:', import.meta.env.MODE);
 console.log('Axios config - All env vars:', import.meta.env);
-
-if (!API_URL) {
-  console.error('VITE_API_URL is not defined in axios config!');
-  console.error('Current environment variables:', import.meta.env);
-}
 
 const api = axios.create({
   baseURL: API_URL,
