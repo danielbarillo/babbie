@@ -10,7 +10,7 @@ export function Login() {
   const [username, setUsername] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
-  const { login, isLoading } = useAuth();
+  const { login, loginAsGuest, isLoading } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -18,19 +18,25 @@ export function Login() {
     setError(null);
 
     try {
+      console.log('Attempting login with username:', username);
       await login(username, password);
+      console.log('Login successful, navigating to home');
       navigate("/");
-    } catch (err) {
-      setError("Invalid username or password");
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setError(err.response?.data?.message || "Invalid username or password");
     }
   };
 
   const handleGuestLogin = async () => {
     setError(null);
     try {
-      await login("guest", "guest123");
+      console.log('Attempting guest login');
+      await loginAsGuest();
+      console.log('Guest login successful, navigating to home');
       navigate("/");
-    } catch (err) {
+    } catch (err: any) {
+      console.error('Guest login error:', err);
       setError("Failed to login as guest");
     }
   };
@@ -64,6 +70,7 @@ export function Login() {
               placeholder="Enter your username"
               required
               className="w-full"
+              disabled={isLoading}
             />
           </div>
 
@@ -79,6 +86,7 @@ export function Login() {
               placeholder="Enter your password"
               required
               className="w-full"
+              disabled={isLoading}
             />
           </div>
 
@@ -109,7 +117,7 @@ export function Login() {
             onClick={handleGuestLogin}
             disabled={isLoading}
           >
-            Continue as Guest
+            {isLoading ? <LoadingSpinner /> : "Continue as Guest"}
           </Button>
 
           <div className="text-center text-sm">

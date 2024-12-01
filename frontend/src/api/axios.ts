@@ -4,8 +4,6 @@ import axios from 'axios';
 const API_URL = 'https://chappyv.onrender.com';
 
 console.log('Axios config - API URL:', API_URL);
-console.log('Axios config - Environment:', import.meta.env.MODE);
-console.log('Axios config - All env vars:', import.meta.env);
 
 const api = axios.create({
   baseURL: API_URL,
@@ -25,7 +23,7 @@ api.interceptors.request.use(
       method: config.method,
       url: config.url,
       baseURL: config.baseURL,
-      fullURL: config.baseURL + config.url,
+      fullURL: `${config.baseURL}${config.url}`,
       headers: config.headers,
       data: config.data
     });
@@ -40,7 +38,7 @@ api.interceptors.request.use(
 // Add a response interceptor to handle errors
 api.interceptors.response.use(
   (response) => {
-    console.log('Response:', {
+    console.log('Response received:', {
       status: response.status,
       url: response.config.url,
       data: response.data
@@ -50,9 +48,14 @@ api.interceptors.response.use(
   (error) => {
     console.error('API Error:', {
       message: error.message,
-      response: error.response,
-      request: error.request,
-      config: error.config
+      status: error.response?.status,
+      data: error.response?.data,
+      config: {
+        method: error.config?.method,
+        url: error.config?.url,
+        baseURL: error.config?.baseURL,
+        fullURL: `${error.config?.baseURL}${error.config?.url}`,
+      }
     });
     return Promise.reject(error);
   }
