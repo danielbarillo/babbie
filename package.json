@@ -5,10 +5,10 @@
   "scripts": {
     "install-frontend": "cd frontend && npm install",
     "install-backend": "cd backend && npm install",
-    "postinstall": "npm run install-frontend && npm run install-backend",
+    "postinstall": "npm run install-backend && npm run install-frontend",
     "build-frontend": "cd frontend && npm run build",
     "build-backend": "cd backend && npm run build",
-    "build": "npm run build-frontend && npm run build-backend",
+    "build": "npm run build-backend && npm run build-frontend",
     "start": "cd backend && npm start",
     "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm run dev\""
   },
@@ -16,10 +16,10 @@
     "node": ">=18.0.0"
   },
   "devDependencies": {
-    "@types/express": "^5.0.0",
-    "@types/jsonwebtoken": "^9.0.7",
-    "@types/node": "^22.10.1",
     "concurrently": "^8.0.1",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^20.11.24",
     "typescript": "^5.7.2"
   }
 }
