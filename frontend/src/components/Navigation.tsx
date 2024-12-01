@@ -2,7 +2,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 export default function Navigation() {
-  const { isAuthenticated, logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -14,7 +14,7 @@ export default function Navigation() {
     <nav className="bg-gray-800 text-white p-4">
       <div className="container mx-auto flex justify-between items-center">
         <div className="font-bold text-xl">Chappy</div>
-        {isAuthenticated ? (
+        {user ? (
           <button
             onClick={handleLogout}
             className="bg-red-600 px-4 py-2 rounded hover:bg-red-700"

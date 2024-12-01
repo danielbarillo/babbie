@@ -19,7 +19,7 @@ export function Sidebar({ onClose }: SidebarProps) {
     error,
     isLoading,
   } = useStore();
-  const { userState } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   return (
@@ -50,7 +50,7 @@ export function Sidebar({ onClose }: SidebarProps) {
                 <Hash className="h-5 w-5" />
                 Channels
               </h2>
-              {userState?.type === 'authenticated' && (
+              {user && (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -91,7 +91,7 @@ export function Sidebar({ onClose }: SidebarProps) {
           </div>
 
           {/* Direct Messages Section */}
-          {userState?.type === 'authenticated' && (
+          {user && (
             <>
               <div className="p-4 border-y">
                 <div className="flex justify-between items-center">

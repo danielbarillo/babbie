@@ -10,22 +10,22 @@ import { Button } from "./ui/button";
 import { useNavigate } from "react-router-dom";
 
 export function MainLayout() {
-  const { currentChannel, userState, fetchChannels } = useStore();
+  const { currentChannel } = useStore();
   const { theme, setTheme } = useTheme();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   React.useEffect(() => {
-    fetchChannels();
-  }, [fetchChannels]);
+    // Any initialization if needed
+  }, []);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  if (!userState) {
+  if (!user) {
     return null;
   }
 
@@ -74,32 +74,13 @@ export function MainLayout() {
                 <Sun className="h-5 w-5" />
               )}
             </Button>
-            {userState.type === 'authenticated' ? (
-              <Button
-                variant="ghost"
-                onClick={handleLogout}
-                className="text-destructive hover:text-destructive-foreground hover:bg-destructive"
-              >
-                Logout
-              </Button>
-            ) : (
-              <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  onClick={() => navigate('/login')}
-                  className="flex items-center gap-2"
-                >
-                  <LogIn className="h-4 w-4" />
-                  Sign In
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => navigate('/register')}
-                >
-                  Register
-                </Button>
-              </div>
-            )}
+            <Button
+              variant="ghost"
+              onClick={handleLogout}
+              className="text-destructive hover:text-destructive-foreground hover:bg-destructive"
+            >
+              Logout
+            </Button>
           </div>
         </header>
 
