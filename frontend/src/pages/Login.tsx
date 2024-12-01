@@ -1,45 +1,44 @@
 import React from "react";
-import { useAuth } from "../contexts/AuthContext";
+import { useStore } from "../store/useStore";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Card } from "../components/ui/card";
 import LoadingSpinner from "../components/LoadingSpinner";
-import { useStore } from "../store/useStore";
 
 export function Login() {
   const [username, setUsername] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
-  const { isLoading } = useStore();
   const navigate = useNavigate();
-  const store = useStore();
+  const { login, loginAsGuest, isLoading } = useStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
+    if (!username || !password) {
+      setError("Username and password are required");
+      return;
+    }
+
     try {
-      console.log('Attempting login with username:', username);
-      await store.login({ username, password });
-      console.log('Login successful, navigating to home');
+      await login({ username, password });
       navigate("/");
     } catch (err: any) {
       console.error('Login error:', err);
-      setError(err.message || "Invalid username or password");
+      setError(err.message || "Failed to login. Please try again.");
     }
   };
 
   const handleGuestLogin = async () => {
     setError(null);
     try {
-      console.log('Attempting guest login');
-      await store.loginAsGuest();
-      console.log('Guest login successful, navigating to home');
+      await loginAsGuest();
       navigate("/");
     } catch (err: any) {
       console.error('Guest login error:', err);
-      setError("Failed to login as guest");
+      setError("Failed to login as guest. Please try again.");
     }
   };
 
@@ -73,6 +72,7 @@ export function Login() {
               required
               className="w-full"
               disabled={isLoading}
+              autoComplete="username"
             />
           </div>
 
@@ -89,6 +89,7 @@ export function Login() {
               required
               className="w-full"
               disabled={isLoading}
+              autoComplete="current-password"
             />
           </div>
 

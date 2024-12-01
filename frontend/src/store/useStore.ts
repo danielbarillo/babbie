@@ -134,11 +134,9 @@ export const useStore = create<StoreState>()(
       login: async (credentials) => {
         try {
           set({ isLoading: true, error: null });
-          console.log('Attempting login with credentials:', { ...credentials, password: '[REDACTED]' });
           const { data } = await api.post('/auth/login', credentials);
-          console.log('Login response:', data);
 
-          if (!data.token || !data.user) {
+          if (!data || !data.token || !data.user) {
             throw new Error('Invalid response from server');
           }
 
@@ -158,34 +156,39 @@ export const useStore = create<StoreState>()(
             token: data.token,
             isLoading: false,
             error: null,
-            isInitialized: true
+            isInitialized: true,
+            channels: [], // Reset channels
+            messages: [], // Reset messages
+            conversations: [], // Reset conversations
+            currentChannel: null // Reset current channel
           });
 
           // Store token in localStorage
           localStorage.setItem('token', data.token);
-          console.log('Login successful, user state updated');
 
           // Fetch initial data
-          const store = get();
-          await store.fetchChannels();
-          await store.fetchConversations();
+          await get().fetchChannels();
+          await get().fetchConversations();
 
           // Join first available channel if none is selected
-          const channels = get().channels;
-          if (channels.length > 0 && !get().currentChannel) {
-            await store.joinChannel(channels[0]._id);
+          const { channels, currentChannel } = get();
+          if (channels && channels.length > 0 && !currentChannel) {
+            await get().joinChannel(channels[0]._id);
           }
 
-        } catch (error) {
-          const apiError = error as ApiError;
-          const errorMessage = apiError.response?.data?.message || apiError.message;
-          console.error('Login error:', errorMessage);
+        } catch (error: any) {
+          console.error('Login error:', error);
+          const errorMessage = error.response?.data?.message || error.message || 'Failed to login';
 
           set({
             error: errorMessage,
             isLoading: false,
             userState: null,
-            token: null
+            token: null,
+            channels: [],
+            messages: [],
+            conversations: [],
+            currentChannel: null
           });
 
           throw new Error(errorMessage);
@@ -195,33 +198,47 @@ export const useStore = create<StoreState>()(
       loginAsGuest: async () => {
         try {
           set({ isLoading: true, error: null });
-          console.log('Setting up guest user');
 
           const guestUser: GuestUser = {
             type: 'guest'
           };
 
+          // Clear any existing auth
+          localStorage.removeItem('token');
+          delete api.defaults.headers.common['Authorization'];
+
+          // Update store state
           set({
             userState: guestUser,
             token: null,
             isLoading: false,
             error: null,
-            isInitialized: true
+            isInitialized: true,
+            channels: [], // Reset channels
+            messages: [], // Reset messages
+            conversations: [], // Reset conversations
+            currentChannel: null // Reset current channel
           });
 
-          console.log('Guest login successful');
-        } catch (error) {
-          const apiError = error as ApiError;
-          console.error('Guest login error:', apiError);
+          // Fetch public channels for guest
+          await get().fetchChannels();
+
+        } catch (error: any) {
+          console.error('Guest login error:', error);
+          const errorMessage = error.message || 'Failed to login as guest';
 
           set({
-            error: apiError.message || 'Failed to login as guest',
+            error: errorMessage,
             isLoading: false,
             userState: null,
-            token: null
+            token: null,
+            channels: [],
+            messages: [],
+            conversations: [],
+            currentChannel: null
           });
 
-          throw new Error(apiError.message || 'Failed to login as guest');
+          throw new Error(errorMessage);
         }
       },
 

@@ -1,9 +1,8 @@
 import axios from 'axios';
 
-const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
-
 const api = axios.create({
-  baseURL,
+  baseURL: import.meta.env.VITE_API_URL || 'https://chappyv.onrender.com',
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -19,27 +18,19 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
+    console.error('Request error:', error);
     return Promise.reject(error);
   }
 );
 
 // Add a response interceptor
 api.interceptors.response.use(
-  (response) => {
-    // If the response includes a token, store it
-    const token = response.data?.token;
-    if (token) {
-      localStorage.setItem('token', token);
-    }
-    return response;
-  },
+  (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Handle unauthorized access
+      // Clear token on auth error
       localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      // Use the correct base path for GitHub Pages
-      window.location.href = '/chappy/login';
+      delete api.defaults.headers.common['Authorization'];
     }
     return Promise.reject(error);
   }
