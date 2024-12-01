@@ -96,22 +96,18 @@ interface StoreState {
 const API_URL = import.meta.env.VITE_API_URL;
 
 console.log('Environment:', import.meta.env.MODE);
-console.log('API URL:', API_URL);
+console.log('API URL from env:', import.meta.env.VITE_API_URL);
+console.log('API URL const:', API_URL);
 console.log('Base URL from axios:', api.defaults.baseURL);
 
 if (!API_URL) {
-  console.error('VITE_API_URL is not defined!')
+  console.error('VITE_API_URL is not defined in environment!')
+  console.error('Current environment variables:', import.meta.env)
 }
 
 // Helper function to check if user is authenticated
 const isAuthenticated = (userState: UserState | null): userState is AuthenticatedUser => {
   return userState?.type === 'authenticated'
-}
-
-// Clear any stale data from localStorage
-if (typeof window !== 'undefined') {
-  const staleKeys = ['chappy-storage', 'token'];
-  staleKeys.forEach(key => localStorage.removeItem(key));
 }
 
 export const useStore = create<StoreState>()(
