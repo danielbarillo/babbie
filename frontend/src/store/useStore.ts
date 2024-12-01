@@ -108,6 +108,12 @@ const isAuthenticated = (userState: UserState | null): userState is Authenticate
   return userState?.type === 'authenticated'
 }
 
+// Clear any stale data from localStorage
+if (typeof window !== 'undefined') {
+  const staleKeys = ['chappy-storage', 'token'];
+  staleKeys.forEach(key => localStorage.removeItem(key));
+}
+
 export const useStore = create<StoreState>()(
   persist(
     (set, get) => ({
