@@ -1,31 +1,30 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useStore } from "../store/useStore";
-import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "./ThemeProvider";
 import { Sidebar } from "./Sidebar";
 import { MessageList } from "./MessageList";
 import { MessageInput } from "./MessageInput";
-import { Moon, Sun, LogIn, Menu } from "lucide-react";
+import { Moon, Sun, Menu } from "lucide-react";
 import { Button } from "./ui/button";
 import { useNavigate } from "react-router-dom";
 
 export function MainLayout() {
-  const { currentChannel } = useStore();
+  const { currentChannel, userState, logout, fetchChannels } = useStore();
   const { theme, setTheme } = useTheme();
-  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  React.useEffect(() => {
-    // Any initialization if needed
-  }, []);
+  useEffect(() => {
+    // Fetch channels when component mounts
+    fetchChannels().catch(console.error);
+  }, [fetchChannels]);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  if (!user) {
+  if (!userState) {
     return null;
   }
 

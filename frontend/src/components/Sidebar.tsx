@@ -1,6 +1,5 @@
 import React from "react";
 import { useStore } from "../store/useStore";
-import { useAuth } from "../contexts/AuthContext";
 import { ScrollArea } from "./ui/scroll-area";
 import { Button } from "./ui/button";
 import { Plus, Hash, Lock, MessageSquare, X } from "lucide-react";
@@ -18,9 +17,11 @@ export function Sidebar({ onClose }: SidebarProps) {
     joinChannel,
     error,
     isLoading,
+    userState
   } = useStore();
-  const { user } = useAuth();
   const navigate = useNavigate();
+
+  const isAuthenticated = userState?.type === 'authenticated';
 
   return (
     <aside className="w-full h-full border-r bg-background flex flex-col">
@@ -50,7 +51,7 @@ export function Sidebar({ onClose }: SidebarProps) {
                 <Hash className="h-5 w-5" />
                 Channels
               </h2>
-              {user && (
+              {isAuthenticated && (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -91,7 +92,7 @@ export function Sidebar({ onClose }: SidebarProps) {
           </div>
 
           {/* Direct Messages Section */}
-          {user && (
+          {isAuthenticated && (
             <>
               <div className="p-4 border-y">
                 <div className="flex justify-between items-center">
