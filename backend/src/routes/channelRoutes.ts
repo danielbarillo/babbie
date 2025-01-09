@@ -4,6 +4,7 @@ import { Channel } from '../models/Channel';
 import { validate } from '../middleware/validate';
 import { schemas } from '../validation/schemas';
 import mongoose from 'mongoose';
+import { channelController } from '../controllers/channelController';
 
 const router = Router();
 
@@ -137,5 +138,8 @@ router.post('/:id/leave', requireAuth, async (req: AuthRequest, res) => {
     res.status(500).json({ message: 'Error leaving channel' });
   }
 });
+
+// Get channel users
+router.get('/:channelId/users', channelController.getChannelUsers);
 
 export default router;

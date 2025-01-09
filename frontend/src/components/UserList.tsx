@@ -1,58 +1,43 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import api from '../api/axios';
-import { Button } from './ui/button';
-import { ScrollArea } from './ui/scroll-area';
+import { useStore } from '../store/useStore';
+import { Card } from './ui/card';
 
 interface User {
   _id: string;
   username: string;
-  email: string;
+  isOnline?: boolean;
 }
 
 export function UserList() {
   const [users, setUsers] = useState<User[]>([]);
-  const [error, setError] = useState('');
-  const navigate = useNavigate();
+  const { currentChannel } = useStore();
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const response = await api.get('/users');
-        setUsers(response.data);
-      } catch (error) {
-        setError('Failed to fetch users');
-        console.error('Error fetching users:', error);
-      }
-    };
+    // Hämta bara användare för den aktuella kanalen
+    if (currentChannel) {
+      fetch(`/api/channels/${currentChannel._id}/users`)
+        .then(res => res.json())
+        .then(data => setUsers(data))
+        .catch(console.error);
+    }
+  }, [currentChannel]);
 
-    fetchUsers();
-  }, []);
-
-  const startChat = (userId: string) => {
-    navigate(`/messages/${userId}`);
-  };
+  if (!users.length) return null;
 
   return (
-    <ScrollArea className="h-[calc(100vh-10rem)]">
-      <div className="p-4 space-y-4">
-        <h2 className="font-semibold text-lg">Users</h2>
-        {error && (
-          <div className="text-sm text-destructive">{error}</div>
-        )}
-        <div className="space-y-2">
-          {users.map(user => (
-            <Button
-              key={user._id}
-              variant="ghost"
-              className="w-full justify-start"
-              onClick={() => startChat(user._id)}
-            >
-              {user.username}
-            </Button>
-          ))}
-        </div>
+    <Card className="p-4">
+      <h3 className="font-semibold mb-2">Online Users</h3>
+      <div className="space-y-1">
+        {users.map(user => (
+          <div
+            key={user._id}
+            className="flex items-center gap-2"
+          >
+            <div className={`w-2 h-2 rounded-full ${user.isOnline ? 'bg-green-500' : 'bg-gray-300'}`} />
+            <span className="text-sm">{user.username}</span>
+          </div>
+        ))}
       </div>
-    </ScrollArea>
+    </Card>
   );
 }

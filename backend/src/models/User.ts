@@ -9,6 +9,8 @@ export interface IUser {
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
+  isOnline: boolean;
+  lastSeen: Date;
 }
 
 const userSchema = new mongoose.Schema({
@@ -31,6 +33,13 @@ const userSchema = new mongoose.Schema({
     required: true,
     minlength: 6,
     select: false,
+  },
+  isOnline: {
+    type: Boolean,
+    default: false,
+  },
+  lastSeen: {
+    type: Date,
   },
 }, {
   timestamps: true,

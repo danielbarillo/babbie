@@ -145,3 +145,29 @@ export const getPublicChannels: RouteHandler = async (req, res) => {
     res.status(500).json({ message: 'Error fetching public channels' });
   }
 };
+
+export const getChannelUsers = async (req: AuthRequest, res: Response) => {
+  try {
+    const { channelId } = req.params;
+
+    const channel = await Channel.findById(channelId)
+      .populate('members', 'username isOnline')
+      .exec();
+
+    if (!channel) {
+      return res.status(404).json({ message: 'Channel not found' });
+    }
+
+    // Filtrera och formatera användardata
+    const users = channel.members.map(member => ({
+      _id: member._id,
+      username: member.username,
+      isOnline: member.isOnline || false
+    }));
+
+    res.json(users);
+  } catch (error) {
+    console.error('Error fetching channel users:', error);
+    res.status(500).json({ message: 'Error fetching channel users' });
+  }
+};
