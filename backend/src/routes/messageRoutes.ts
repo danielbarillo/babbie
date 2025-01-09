@@ -21,7 +21,7 @@ router.get('/channel/:channelId', attachUserState, async (req: AuthRequest, res)
       channel: req.params.channelId
     })
       .sort({ createdAt: 1 })
-      .populate('sender', 'username')  // Förenkla populate
+      .populate('sender', 'username')
       .exec();
 
     // Enklare formatering av meddelanden
@@ -35,7 +35,7 @@ router.get('/channel/:channelId', attachUserState, async (req: AuthRequest, res)
         ...msg.toObject(),
         sender: {
           _id: msg.sender?._id,
-          username: msg.sender?.username || 'Unknown User'
+          username: (msg.sender as any)?.username || 'Unknown User'
         }
       };
     });
