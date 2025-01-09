@@ -61,3 +61,10 @@ You can test the application in three ways:
 The application is deployed on Render.com with:
 - Backend: https://chappyv.onrender.com
 - Frontend: https://chappy-frontend.onrender.com
+
+## Troubleshooting
+If you encounter issues:
+1. Clear browser cache and local storage
+2. Ensure all environment variables are set correctly
+3. Check console for any error messages
+4. Verify MongoDB connection

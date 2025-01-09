@@ -6,14 +6,18 @@ import { Send } from "lucide-react";
 
 export function MessageInput() {
   const [message, setMessage] = useState("");
-  const { sendMessage, currentChannel, guestName } = useStore();
+  const { sendMessage, currentChannel, userState, guestName } = useStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim() || !currentChannel) return;
 
     try {
-      await sendMessage(message.trim(), guestName);
+      if (userState?.type === 'guest') {
+        await sendMessage(message.trim(), guestName);
+      } else {
+        await sendMessage(message.trim());
+      }
       setMessage("");
     } catch (error) {
       console.error("Failed to send message:", error);

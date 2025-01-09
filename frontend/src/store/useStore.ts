@@ -245,6 +245,7 @@ export const useStore = create<StoreState>()(
       loginAsGuest: async () => {
         try {
           set({ isLoading: true, error: null });
+          console.log("Starting guest login"); // Lägg till för debugging
 
           const guestUser: GuestUser = {
             type: 'guest'
@@ -263,6 +264,7 @@ export const useStore = create<StoreState>()(
             isInitialized: true
           });
 
+          console.log("Guest login successful"); // Lägg till för debugging
           // Fetch public channels for guest
           await get().fetchChannels();
 
@@ -357,14 +359,19 @@ export const useStore = create<StoreState>()(
 
       // Message actions
       sendMessage: async (content, guestName) => {
-        const { currentChannel } = get();
+        const { currentChannel, userState } = get();
         if (!currentChannel) return;
 
         try {
-          const { data } = await api.post(`/messages/channel/${currentChannel._id}`, {
+          const messageData = {
             content,
-            guestName
-          });
+            ...(userState?.type === 'guest' && { guestName })
+          };
+
+          const { data } = await api.post(
+            `/messages/channel/${currentChannel._id}`,
+            messageData
+          );
 
           set((state) => ({
             messages: [...state.messages, data]

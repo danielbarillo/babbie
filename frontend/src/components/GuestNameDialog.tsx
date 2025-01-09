@@ -10,13 +10,13 @@ interface GuestNameDialogProps {
 }
 
 export function GuestNameDialog({ onSubmit, onClose }: GuestNameDialogProps) {
+  console.log("Rendering GuestNameDialog");
+
   const [inputValue, setInputValue] = useState('');
-  const { setGuestName } = useStore();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (inputValue.trim()) {
-      setGuestName(inputValue.trim());
       onSubmit(inputValue.trim());
     }
   };

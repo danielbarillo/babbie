@@ -28,11 +28,14 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
 
     const message = new Message({
       content: content.trim(),
-      sender: req.user ? req.user._id : { type: 'guest', username: guestName || 'Guest' },
+      sender: req.user ?
+        req.user._id :
+        { type: 'guest', username: guestName || 'Guest' },
       channel: channelId
     });
 
     await message.save();
+    console.log('Message saved:', message);
 
     if (req.user) {
       await message.populate('sender', 'username');

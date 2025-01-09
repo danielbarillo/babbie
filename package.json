@@ -23,6 +23,7 @@
     "typescript": "^5.7.2"
   },
   "dependencies": {
-    "@radix-ui/react-dialog": "^1.1.4"
+    "@radix-ui/react-dialog": "^1.1.4",
+    "@radix-ui/themes": "^3.1.6"
   }
 }

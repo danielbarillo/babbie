@@ -11,7 +11,6 @@ export function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showGuestDialog, setShowGuestDialog] = useState(false);
-  const [guestName, setGuestName] = useState("");
   const navigate = useNavigate();
   const { login, loginAsGuest, isLoading, error } = useStore();
 
@@ -26,12 +25,17 @@ export function Login() {
   };
 
   const handleGuestLogin = () => {
+    console.log("Opening guest dialog");
     setShowGuestDialog(true);
+    setTimeout(() => {
+      console.log("showGuestDialog state:", showGuestDialog);
+    }, 0);
   };
 
   const handleGuestNameSubmit = async (name: string) => {
     try {
       const { setGuestName } = useStore.getState();
+      console.log("Setting guest name:", name);
       setGuestName(name);
       await loginAsGuest();
       setShowGuestDialog(false);
