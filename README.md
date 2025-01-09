@@ -78,3 +78,12 @@ If you encounter issues:
 2. Ensure all environment variables are set correctly
 3. Check console for any error messages
 4. Verify MongoDB connection
+
+## User Features
+- Real-time user status (online/offline)
+- Channel-specific user lists
+- Guest access with custom display names
+- Authenticated user features:
+  - Private channels
+  - Direct messages
+  - User profile

@@ -3,6 +3,7 @@ import { Channel } from '../models/Channel';
 import type { AuthRequest, RouteHandler } from '../types/express';
 import mongoose from 'mongoose';
 import { schemas } from '../validation/schemas';
+import { User, UserDocument } from '../models/User';
 
 export const getChannels = async (req: AuthRequest, res: Response) => {
   try {
@@ -151,14 +152,14 @@ export const getChannelUsers = async (req: AuthRequest, res: Response) => {
     const { channelId } = req.params;
 
     const channel = await Channel.findById(channelId)
-      .populate('members', 'username isOnline')
+      .populate<{ members: UserDocument[] }>('members', 'username isOnline')
       .exec();
 
     if (!channel) {
       return res.status(404).json({ message: 'Channel not found' });
     }
 
-    // Filtrera och formatera användardata
+    // Nu har vi rätt typning för members
     const users = channel.members.map(member => ({
       _id: member._id,
       username: member.username,

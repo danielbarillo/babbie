@@ -4,7 +4,8 @@ import { Channel } from '../models/Channel';
 import { validate } from '../middleware/validate';
 import { schemas } from '../validation/schemas';
 import mongoose from 'mongoose';
-import { channelController } from '../controllers/channelController';
+import * as channelController from '../controllers/channelController';
+import { UserDocument } from '../models/User';
 
 const router = Router();
 
@@ -140,6 +141,29 @@ router.post('/:id/leave', requireAuth, async (req: AuthRequest, res) => {
 });
 
 // Get channel users
-router.get('/:channelId/users', channelController.getChannelUsers);
+router.get('/:channelId/users', attachUserState, async (req: AuthRequest, res) => {
+  try {
+    const { channelId } = req.params;
+
+    const channel = await Channel.findById(channelId)
+      .populate<{ members: UserDocument[] }>('members', 'username isOnline')
+      .exec();
+
+    if (!channel) {
+      return res.status(404).json({ message: 'Channel not found' });
+    }
+
+    const users = channel.members.map(member => ({
+      _id: member._id,
+      username: member.username,
+      isOnline: member.isOnline || false
+    }));
+
+    res.json(users);
+  } catch (error) {
+    console.error('Error fetching channel users:', error);
+    res.status(500).json({ message: 'Error fetching channel users' });
+  }
+});
 
 export default router;
