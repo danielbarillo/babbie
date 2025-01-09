@@ -30,10 +30,26 @@ router.get('/channel/:channelId', attachUserState, async (req: AuthRequest, res)
     const messages = await Message.find({ channel: req.params.channelId })
       .sort({ createdAt: -1 })
       .limit(50)
-      .populate('sender', 'username')
+      .populate({
+        path: 'sender',
+        select: 'username',
+        model: 'User'
+      })
+      .lean()
       .exec();
 
-    res.json(messages);
+    // Formatera meddelanden med korrekt typning
+    const formattedMessages = messages.map(msg => ({
+      ...msg,
+      sender: typeof msg.sender === 'object' && 'type' in msg.sender
+        ? msg.sender  // Gästanvändare
+        : {
+            _id: (msg.sender as any)._id,
+            username: (msg.sender as any)?.username || 'Unknown User'
+          }
+    }));
+
+    res.json(formattedMessages);
   } catch (error) {
     console.error('Error fetching messages:', error);
     res.status(500).json({ message: 'Error fetching messages' });

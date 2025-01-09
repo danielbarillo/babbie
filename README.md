@@ -120,3 +120,19 @@ CORS_ORIGIN=https://chappy-frontend.onrender.com
 - `JWT_SECRET`: Secret key for JWT tokens
 - `PORT`: Server port (default: 5001)
 - `CORS_ORIGIN`: Frontend URL
+
+## Message Features
+- Real-time messaging in channels
+- Support for both authenticated users and guests
+- Message history with usernames
+- Automatic user status updates
+
+### Guest Messages
+- Guests can send messages in public channels
+- Guest messages show custom display names
+- No authentication required for public channels
+
+### Authenticated Messages
+- Full access to all channels
+- Messages show registered username
+- Support for private channels
