@@ -5,7 +5,12 @@ interface GuestSender {
   type: 'guest';
 }
 
-type MessageSender = mongoose.Types.ObjectId | GuestSender;
+export interface IMessage {
+  content: string;
+  sender: mongoose.Types.ObjectId | GuestSender;
+  channel: mongoose.Types.ObjectId;
+  createdAt: Date;
+}
 
 const messageSchema = new mongoose.Schema({
   content: {
@@ -25,4 +30,4 @@ const messageSchema = new mongoose.Schema({
   timestamps: true
 })
 
-export const Message = mongoose.model('Message', messageSchema)
+export const Message = mongoose.model<IMessage>('Message', messageSchema)
