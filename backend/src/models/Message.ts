@@ -19,7 +19,16 @@ const messageSchema = new mongoose.Schema({
   },
   sender: {
     type: mongoose.Schema.Types.Mixed,
-    required: true
+    required: true,
+    validate: {
+      validator: function(v: any) {
+        return (
+          (v.type === 'guest' && typeof v.username === 'string') ||
+          (v.type === 'user' && v._id && v.username)
+        );
+      },
+      message: 'Invalid sender format'
+    }
   },
   channel: {
     type: mongoose.Schema.Types.ObjectId,

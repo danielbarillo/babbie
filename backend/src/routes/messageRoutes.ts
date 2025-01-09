@@ -73,21 +73,25 @@ router.post('/channel/:channelId', attachUserState, async (req: AuthRequest, res
       message = new Message({
         content: content.trim(),
         channel: channelId,
-        sender: req.userState._id
+        sender: {
+          _id: req.userState._id,
+          username: req.userState.username,
+          type: 'user'
+        }
       });
-      await message.save();
-      // Populera sender-fältet för att få med användarnamnet
-      await message.populate('sender', 'username');
     } else {
       // För gäster
       message = new Message({
         content: content.trim(),
         channel: channelId,
-        sender: { type: 'guest', username: guestName || 'Guest' }
+        sender: {
+          type: 'guest',
+          username: guestName || 'Guest'
+        }
       });
-      await message.save();
     }
 
+    await message.save();
     console.log('Message saved:', message);
     res.status(201).json(message);
   } catch (error) {

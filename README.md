@@ -136,3 +136,11 @@ CORS_ORIGIN=https://chappy-frontend.onrender.com
 - Full access to all channels
 - Messages show registered username
 - Support for private channels
+- Direct messaging with other users
+
+### Message Format
+Messages are stored with:
+- Content
+- Sender information (username and type)
+- Channel reference
+- Timestamp
