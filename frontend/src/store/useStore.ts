@@ -363,9 +363,10 @@ export const useStore = create<StoreState>()(
         if (!currentChannel) return;
 
         try {
+          console.log('Sending message:', { content, guestName }); // Debug
           const messageData = {
             content,
-            ...(userState?.type === 'guest' && { guestName })
+            ...(userState?.type === 'guest' && { guestName: guestName || 'Guest' })
           };
 
           const { data } = await api.post(

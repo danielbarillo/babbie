@@ -21,21 +21,29 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
   try {
     const { channelId } = req.params;
     const { content, guestName } = req.body;
+    console.log('Received message request:', { channelId, content, guestName }); // Debug
 
     if (!content || !content.trim()) {
       return res.status(400).json({ message: 'Message content is required' });
     }
 
+    let sender;
+    if (req.user) {
+      sender = req.user._id;
+    } else if (guestName) {
+      sender = { type: 'guest', username: guestName };
+    } else {
+      return res.status(400).json({ message: 'Sender information is required' });
+    }
+
     const message = new Message({
       content: content.trim(),
-      sender: req.user ?
-        req.user._id :
-        { type: 'guest', username: guestName || 'Guest' },
+      sender,
       channel: channelId
     });
 
     await message.save();
-    console.log('Message saved:', message);
+    console.log('Message saved:', message); // Debug
 
     if (req.user) {
       await message.populate('sender', 'username');
