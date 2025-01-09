@@ -16,7 +16,7 @@ router.get('/channel/:channelId', attachUserState, async (req: AuthRequest, res)
       return res.status(404).json({ message: 'Channel not found' });
     }
 
-    // Check if channel is private and user is authenticated and a member
+    // Check if channel is private
     if (channel.isPrivate) {
       if (!req.userState || !isAuthenticated(req.userState)) {
         return res.status(401).json({ message: 'Authentication required' });
@@ -27,9 +27,11 @@ router.get('/channel/:channelId', attachUserState, async (req: AuthRequest, res)
       }
     }
 
-    const messages = await Message.find({ channel: req.params.channelId })
-      .sort({ createdAt: -1 })
-      .limit(50)
+    // Hämta alla meddelanden för kanalen
+    const messages = await Message.find({
+      channel: req.params.channelId
+    })
+      .sort({ createdAt: 1 }) // Sortera äldst först
       .populate({
         path: 'sender',
         select: 'username',
@@ -44,11 +46,12 @@ router.get('/channel/:channelId', attachUserState, async (req: AuthRequest, res)
       sender: typeof msg.sender === 'object' && 'type' in msg.sender
         ? msg.sender  // Gästanvändare
         : {
-            _id: (msg.sender as any)._id,
+            _id: (msg.sender as any)?._id,
             username: (msg.sender as any)?.username || 'Unknown User'
           }
     }));
 
+    console.log(`Fetched ${formattedMessages.length} messages for channel ${req.params.channelId}`);
     res.json(formattedMessages);
   } catch (error) {
     console.error('Error fetching messages:', error);
