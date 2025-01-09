@@ -28,12 +28,15 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
 
     const message = new Message({
       content: content.trim(),
-      sender: req.user._id,
+      sender: req.user ? req.user._id : { type: 'guest', username: 'Guest' },
       channel: channelId
     });
 
     await message.save();
-    await message.populate('sender', 'username avatarColor');
+
+    if (req.user) {
+      await message.populate('sender', 'username');
+    }
 
     res.status(201).json(message);
   } catch (error) {

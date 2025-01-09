@@ -7,6 +7,7 @@ import { MessageInput } from "./MessageInput";
 import { Moon, Sun, Menu } from "lucide-react";
 import { Button } from "./ui/button";
 import { useNavigate } from "react-router-dom";
+import { UserList } from './UserList';
 
 export function MainLayout() {
   const { currentChannel, userState, logout, fetchChannels } = useStore();
@@ -92,6 +93,12 @@ export function MainLayout() {
           )}
         </div>
         {currentChannel && <MessageInput />}
+
+        {isAuthenticated && (
+          <div className="mt-4">
+            <UserList />
+          </div>
+        )}
       </main>
     </div>
   );

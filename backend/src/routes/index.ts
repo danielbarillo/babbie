@@ -3,6 +3,7 @@ import authRoutes from './authRoutes';
 import channelRoutes from './channelRoutes';
 import messageRoutes from './messageRoutes';
 import directMessageRoutes from './directMessageRoutes';
+import { getUsers } from '../controllers/userController';
 
 const router = express.Router();
 
@@ -22,5 +23,8 @@ router.use('/messages', messageRoutes);
 
 // Direct message routes
 router.use('/dm', directMessageRoutes);
+
+// User routes
+router.get('/users', getUsers);
 
 export default router;

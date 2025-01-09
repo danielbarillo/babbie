@@ -4,6 +4,7 @@ import { connectDB } from './config/db';
 import routes from './routes';
 import cors from 'cors';
 import mongoose from 'mongoose';
+import { seedData } from './config/seed';
 
 dotenv.config();
 
@@ -64,6 +65,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 const startServer = async () => {
   try {
     await connectDB();
+    await seedData();
 
     if (mongoose.connection.readyState === 1) {
       const PORT = process.env.PORT || 5001;
