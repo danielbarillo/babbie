@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { Message } from '../models/Message';
 import type { AuthRequest } from '../types/express';
+import { Channel } from '../models/Channel';
 
 export const getMessages = async (req: AuthRequest, res: Response) => {
   try {
@@ -27,27 +28,28 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: 'Message content is required' });
     }
 
-    let sender;
-    if (req.user) {
-      sender = req.user._id;
-    } else if (guestName) {
-      sender = { type: 'guest', username: guestName };
-    } else {
-      return res.status(400).json({ message: 'Sender information is required' });
+    // Kontrollera att kanalen finns
+    const channel = await Channel.findById(channelId);
+    if (!channel) {
+      return res.status(404).json({ message: 'Channel not found' });
     }
 
+    // Skapa meddelandet
     const message = new Message({
       content: content.trim(),
-      sender,
-      channel: channelId
+      channel: channelId,
+      sender: req.user ? {
+        _id: req.user._id,
+        username: req.user.username,
+        type: 'authenticated'
+      } : {
+        type: 'guest',
+        username: guestName || 'Guest'
+      }
     });
 
     await message.save();
     console.log('Message saved:', message); // Debug
-
-    if (req.user) {
-      await message.populate('sender', 'username');
-    }
 
     res.status(201).json(message);
   } catch (error) {
