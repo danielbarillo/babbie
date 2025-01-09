@@ -47,16 +47,8 @@ export const schemas = {
   },
   message: {
     create: Joi.object({
-      content: Joi.string()
-        .trim()
-        .min(1)
-        .max(500)
-        .required()
-        .messages({
-          'string.empty': 'Message cannot be empty',
-          'string.min': 'Message cannot be empty',
-          'string.max': 'Message cannot exceed 500 characters'
-        })
+      content: Joi.string().required().trim().max(1000),
+      guestName: Joi.string().optional()
     })
   },
   channel: {

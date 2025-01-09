@@ -41,42 +41,32 @@ router.get('/channel/:channelId', attachUserState, async (req: AuthRequest, res)
 });
 
 // Send a message to a channel
-router.post('/channel/:channelId', attachUserState, validate(schemas.message.create), async (req: AuthRequest, res) => {
+router.post('/channel/:channelId', attachUserState, async (req: AuthRequest, res) => {
   try {
     const { channelId } = req.params;
     const { content, guestName } = req.body;
-    console.log('Sending message:', { channelId, content, guestName }); // Debug
+    console.log('Processing message:', { channelId, content, guestName });
 
     const channel = await Channel.findById(channelId);
     if (!channel) {
       return res.status(404).json({ message: 'Channel not found' });
     }
 
-    // For private channels, require authentication
+    // Allow guest messages in public channels
     if (channel.isPrivate && (!req.userState || !isAuthenticated(req.userState))) {
       return res.status(401).json({ message: 'Authentication required for private channels' });
     }
 
-    // Create message with appropriate sender info
-    const messageData = {
+    const message = new Message({
       content: content.trim(),
-      channel: new mongoose.Types.ObjectId(channelId),
+      channel: channelId,
       sender: req.userState && isAuthenticated(req.userState)
-        ? new mongoose.Types.ObjectId(req.userState._id)
-        : {
-            type: 'guest' as const,
-            username: guestName || 'Guest'
-          }
-    };
+        ? req.userState._id
+        : { type: 'guest', username: guestName || 'Guest' }
+    });
 
-    const message = new Message(messageData);
     await message.save();
-    console.log('Message saved:', message); // Debug
-
-    // Only populate sender if it's a reference to a User
-    if (req.userState && isAuthenticated(req.userState)) {
-      await message.populate('sender', 'username');
-    }
+    console.log('Message saved:', message);
 
     res.status(201).json(message);
   } catch (error) {

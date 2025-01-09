@@ -20,6 +20,10 @@ export const getChannels = async (req: AuthRequest, res: Response) => {
 
 export const createChannel = async (req: AuthRequest, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
     const { error, value } = schemas.channel.create.validate(req.body);
     if (error) {
       return res.status(400).json({
@@ -39,8 +43,8 @@ export const createChannel = async (req: AuthRequest, res: Response) => {
       name,
       description,
       isPrivate,
-      members: [new mongoose.Types.ObjectId(req.user._id)],
-      createdBy: new mongoose.Types.ObjectId(req.user._id)
+      members: [req.user._id],
+      createdBy: req.user._id
     });
 
     await channel.save();
@@ -48,26 +52,27 @@ export const createChannel = async (req: AuthRequest, res: Response) => {
 
     res.status(201).json(channel);
   } catch (error) {
-    if (error instanceof Error && 'code' in error && error.code === 11000) {
-      return res.status(400).json({ message: 'A channel with this name already exists' });
-    }
+    console.error('Error creating channel:', error);
     res.status(500).json({ message: 'Error creating channel' });
   }
 };
 
 export const joinChannel = async (req: AuthRequest, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
     const channel = await Channel.findById(req.params.channelId);
     if (!channel) {
       return res.status(404).json({ message: 'Channel not found' });
     }
 
-    const userId = new mongoose.Types.ObjectId(req.user._id);
-    if (channel.members.some(id => id.equals(userId))) {
+    if (channel.members.some(id => id.equals(req.user!._id))) {
       return res.status(400).json({ message: 'Already a member' });
     }
 
-    channel.members.push(userId);
+    channel.members.push(req.user._id);
     await channel.save();
 
     res.json(channel);
@@ -78,12 +83,16 @@ export const joinChannel = async (req: AuthRequest, res: Response) => {
 
 export const leaveChannel = async (req: AuthRequest, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
     const channel = await Channel.findById(req.params.channelId);
     if (!channel) {
       return res.status(404).json({ message: 'Channel not found' });
     }
 
-    const userId = new mongoose.Types.ObjectId(req.user._id);
+    const userId = req.user._id;
     if (!channel.members.some(id => id.equals(userId))) {
       return res.status(400).json({ message: 'Not a member of this channel' });
     }
@@ -99,13 +108,16 @@ export const leaveChannel = async (req: AuthRequest, res: Response) => {
 
 export const getChannel = async (req: AuthRequest, res: Response) => {
   try {
-    const channel = await Channel.findById(req.params.channelId);
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
 
+    const channel = await Channel.findById(req.params.channelId);
     if (!channel) {
       return res.status(404).json({ message: 'Channel not found' });
     }
 
-    const userId = new mongoose.Types.ObjectId(req.user._id);
+    const userId = req.user._id;
     if (channel.isPrivate && !channel.members.some(id => id.equals(userId))) {
       return res.status(403).json({ message: 'Access denied' });
     }
@@ -118,20 +130,23 @@ export const getChannel = async (req: AuthRequest, res: Response) => {
 
 export const deleteChannel = async (req: AuthRequest, res: Response) => {
   try {
-    const channel = await Channel.findById(req.params.channelId);
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
 
+    const channel = await Channel.findById(req.params.channelId);
     if (!channel) {
       return res.status(404).json({ message: 'Channel not found' });
     }
 
-    const userId = new mongoose.Types.ObjectId(req.user._id);
-    if (!channel.createdBy.equals(userId)) {
+    if (!channel.createdBy.equals(req.user._id)) {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
     await channel.deleteOne();
     res.json({ message: 'Channel deleted successfully' });
   } catch (error) {
+    console.error('Error deleting channel:', error);
     res.status(500).json({ message: 'Error deleting channel' });
   }
 };

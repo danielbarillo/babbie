@@ -1,21 +1,20 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import { AuthRequest, RequestHandler, AuthRequestHandler } from '../types/express';
 
-export const wrapHandler = (handler: RequestHandler) => {
-  return async (req: Request, res: Response, next: NextFunction) => {
+export const wrapHandler = (handler: RequestHandler): RequestHandler => {
+  return async (req, res, next) => {
     try {
-      await handler(req, res);
+      await handler(req, res, next);
     } catch (error) {
       next(error);
     }
   };
 };
 
-export const wrapAuthHandler = (handler: AuthRequestHandler) => {
-  return async (req: Request, res: Response, next: NextFunction) => {
+export const wrapAuthHandler = (handler: AuthRequestHandler): AuthRequestHandler => {
+  return async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      const result = await handler(req as AuthRequest, res);
-      if (result) return result;
+      await handler(req, res, next);
     } catch (error) {
       next(error);
     }

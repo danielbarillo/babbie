@@ -28,6 +28,17 @@
 3. Access public channels
 4. Send messages with your guest name
 
+Note: Guest users can:
+- View and join public channels
+- Send messages in public channels
+- See other users' messages
+- Choose their own display name
+
+Guest users cannot:
+- Access private channels
+- Send direct messages
+- Create new channels
+
 ## Development
 
 1. Clone the repository
@@ -87,3 +98,25 @@ If you encounter issues:
   - Private channels
   - Direct messages
   - User profile
+
+## Environment Setup
+
+### Development
+```env
+PORT=5001
+NODE_ENV=development
+CORS_ORIGIN=http://localhost:5173
+```
+
+### Production
+```env
+PORT=5001
+NODE_ENV=production
+CORS_ORIGIN=https://chappy-frontend.onrender.com
+```
+
+### Required Variables
+- `MONGODB_URI`: MongoDB connection string
+- `JWT_SECRET`: Secret key for JWT tokens
+- `PORT`: Server port (default: 5001)
+- `CORS_ORIGIN`: Frontend URL

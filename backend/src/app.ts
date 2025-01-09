@@ -5,6 +5,7 @@ import routes from './routes';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import { seedData } from './config/seed';
+import { AuthRequest } from './types/express';
 
 dotenv.config();
 
@@ -30,6 +31,18 @@ app.use((req, res, next) => {
     body: req.body,
     query: req.query,
     headers: req.headers
+  });
+  next();
+});
+
+// Request logging middleware
+app.use((req: AuthRequest, res, next) => {
+  console.log('Incoming request:', {
+    method: req.method,
+    path: req.path,
+    body: req.body,
+    headers: req.headers,
+    userState: req.userState // Nu ska TypeScript vara nöjd
   });
   next();
 });

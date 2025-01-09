@@ -6,6 +6,10 @@ import mongoose from 'mongoose';
 
 export const getDirectMessages = async (req: AuthRequest, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
     const { userId } = req.params;
     const currentUserId = req.user._id;
 
@@ -35,6 +39,10 @@ export const getDirectMessages = async (req: AuthRequest, res: Response) => {
 
 export const sendDirectMessage = async (req: AuthRequest, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
     const { userId } = req.params;
     const { content } = req.body;
     const senderId = req.user._id;
@@ -68,6 +76,10 @@ export const sendDirectMessage = async (req: AuthRequest, res: Response) => {
 
 export const getConversations = async (req: AuthRequest, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
     const userId = req.user._id;
 
     // Get the latest message from each conversation
@@ -129,6 +141,10 @@ export const getConversations = async (req: AuthRequest, res: Response) => {
 
 export const markAsRead = async (req: AuthRequest, res: Response) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
     const { messageId } = req.params;
     const userId = req.user._id;
 
@@ -138,7 +154,7 @@ export const markAsRead = async (req: AuthRequest, res: Response) => {
     }
 
     // Only recipient can mark message as read
-    if (message.recipient.toString() !== userId) {
+    if (message.recipient.toString() !== userId.toString()) {
       return res.status(403).json({ message: 'Not authorized' });
     }
 

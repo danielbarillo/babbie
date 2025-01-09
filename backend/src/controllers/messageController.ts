@@ -67,8 +67,12 @@ export const deleteMessage = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Message not found' });
     }
 
-    if (message.sender.toString() !== req.user._id) {
-      return res.status(403).json({ message: 'Not authorized to delete this message' });
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    if (message.sender.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized' });
     }
 
     await message.deleteOne();
