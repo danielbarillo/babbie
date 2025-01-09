@@ -8,9 +8,10 @@ import { Moon, Sun, Menu } from "lucide-react";
 import { Button } from "./ui/button";
 import { useNavigate } from "react-router-dom";
 import { UserList } from './UserList';
+import { GuestNameDialog } from './GuestNameDialog';
 
 export function MainLayout() {
-  const { currentChannel, userState, logout, fetchChannels } = useStore();
+  const { currentChannel, userState, logout, fetchChannels, guestName, setGuestName } = useStore();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -27,8 +28,21 @@ export function MainLayout() {
 
   const isAuthenticated = userState?.type === 'authenticated';
 
+  const handleGuestNameSubmit = (name: string) => {
+    setGuestName(name);
+  };
+
   if (!userState) {
     return null;
+  }
+
+  if (userState?.type === 'guest' && !guestName) {
+    return (
+      <GuestNameDialog
+        onSubmit={handleGuestNameSubmit}
+        onClose={() => {}}
+      />
+    );
   }
 
   return (

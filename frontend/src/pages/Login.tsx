@@ -1,44 +1,43 @@
-import React from "react";
+import React, { useState } from "react";
 import { useStore } from "../store/useStore";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Card } from "../components/ui/card";
 import LoadingSpinner from "../components/LoadingSpinner";
+import { GuestNameDialog } from "../components/GuestNameDialog";
 
 export function Login() {
-  const [username, setUsername] = React.useState("");
-  const [password, setPassword] = React.useState("");
-  const [error, setError] = React.useState<string | null>(null);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [showGuestDialog, setShowGuestDialog] = useState(false);
+  const [guestName, setGuestName] = useState("");
   const navigate = useNavigate();
-  const { login, loginAsGuest, isLoading } = useStore();
+  const { login, loginAsGuest, isLoading, error } = useStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-
-    if (!username || !password) {
-      setError("Username and password are required");
-      return;
-    }
-
     try {
       await login({ username, password });
       navigate("/");
-    } catch (err: any) {
-      console.error('Login error:', err);
-      setError(err.message || "Failed to login. Please try again.");
+    } catch (error) {
+      console.error("Login failed:", error);
     }
   };
 
-  const handleGuestLogin = async () => {
-    setError(null);
+  const handleGuestLogin = () => {
+    setShowGuestDialog(true);
+  };
+
+  const handleGuestNameSubmit = async (name: string) => {
     try {
+      const { setGuestName } = useStore.getState();
+      setGuestName(name);
       await loginAsGuest();
+      setShowGuestDialog(false);
       navigate("/");
-    } catch (err: any) {
-      console.error('Guest login error:', err);
-      setError("Failed to login as guest. Please try again.");
+    } catch (error) {
+      console.error("Guest login failed:", error);
     }
   };
 
@@ -113,25 +112,30 @@ export function Login() {
           </div>
         </div>
 
-        <div className="space-y-3">
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={handleGuestLogin}
-            disabled={isLoading}
-          >
-            {isLoading ? <LoadingSpinner /> : "Continue as Guest"}
-          </Button>
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={handleGuestLogin}
+          disabled={isLoading}
+        >
+          {isLoading ? <LoadingSpinner /> : "Continue as Guest"}
+        </Button>
 
-          <div className="text-center text-sm">
-            <span className="text-muted-foreground">Don't have an account? </span>
-            <Link
-              to="/register"
-              className="font-medium text-primary hover:underline"
-            >
-              Sign up
-            </Link>
-          </div>
+        {showGuestDialog && (
+          <GuestNameDialog
+            onSubmit={handleGuestNameSubmit}
+            onClose={() => setShowGuestDialog(false)}
+          />
+        )}
+
+        <div className="text-center text-sm">
+          <span className="text-muted-foreground">Don't have an account? </span>
+          <Link
+            to="/register"
+            className="font-medium text-primary hover:underline"
+          >
+            Sign up
+          </Link>
         </div>
       </Card>
     </div>

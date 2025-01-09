@@ -44,7 +44,9 @@ export function MessageList() {
               <div className="flex flex-col space-y-1">
                 <div className="flex justify-between items-start gap-2">
                   <span className="font-medium text-sm md:text-base">
-                    {message.sender?.username || 'Unknown User'}
+                    {message.sender.type === 'guest'
+                      ? message.sender.username
+                      : message.sender?.username || 'Unknown User'}
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {format(new Date(message.createdAt), "HH:mm")}

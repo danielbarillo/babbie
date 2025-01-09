@@ -6,7 +6,7 @@ export const getMessages = async (req: AuthRequest, res: Response) => {
   try {
     const { channelId } = req.params;
     const messages = await Message.find({ channel: channelId })
-      .populate('sender', 'username avatarColor')
+      .populate('sender', 'username')
       .sort({ createdAt: 1 })
       .limit(100);
 
@@ -20,7 +20,7 @@ export const getMessages = async (req: AuthRequest, res: Response) => {
 export const sendMessage = async (req: AuthRequest, res: Response) => {
   try {
     const { channelId } = req.params;
-    const { content } = req.body;
+    const { content, guestName } = req.body;
 
     if (!content || !content.trim()) {
       return res.status(400).json({ message: 'Message content is required' });
@@ -28,7 +28,7 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
 
     const message = new Message({
       content: content.trim(),
-      sender: req.user ? req.user._id : { type: 'guest', username: 'Guest' },
+      sender: req.user ? req.user._id : { type: 'guest', username: guestName || 'Guest' },
       channel: channelId
     });
 

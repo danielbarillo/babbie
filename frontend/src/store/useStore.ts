@@ -67,6 +67,7 @@ interface StoreState {
   conversations: Conversation[]
   isLoading: boolean
   isInitialized: boolean
+  guestName: string | null
 
   // Auth actions
   login: (credentials: { username: string; password: string }) => Promise<void>
@@ -83,7 +84,7 @@ interface StoreState {
   leaveChannel: (channelId: string) => Promise<void>
 
   // Message actions
-  sendMessage: (content: string) => Promise<void>
+  sendMessage: (content: string, guestName?: string) => Promise<void>
   fetchMessages: (channelId: string) => Promise<void>
 
   // DM actions
@@ -91,6 +92,9 @@ interface StoreState {
   fetchDirectMessages: (userId: string) => Promise<void>
   sendDirectMessage: (content: string, recipientId: string) => Promise<void>
   setCurrentConversation: (conversation: Conversation | null) => void
+
+  // Guest actions
+  setGuestName: (name: string) => void
 }
 
 // Helper function to check if user is authenticated
@@ -112,6 +116,7 @@ export const useStore = create<StoreState>()(
       conversations: [],
       isLoading: false,
       isInitialized: false,
+      guestName: null,
 
       checkAuth: async () => {
         try {
@@ -255,13 +260,7 @@ export const useStore = create<StoreState>()(
             token: null,
             isLoading: false,
             error: null,
-            isInitialized: true,
-            channels: [],
-            messages: [],
-            conversations: [],
-            currentChannel: null,
-            currentConversation: null,
-            directMessages: []
+            isInitialized: true
           });
 
           // Fetch public channels for guest
@@ -270,20 +269,12 @@ export const useStore = create<StoreState>()(
         } catch (error: any) {
           console.error('Guest login error:', error);
           const errorMessage = error.message || 'Failed to login as guest';
-
           set({
             error: errorMessage,
             isLoading: false,
             userState: null,
-            token: null,
-            channels: [],
-            messages: [],
-            conversations: [],
-            currentChannel: null,
-            currentConversation: null,
-            directMessages: []
+            token: null
           });
-
           throw new Error(errorMessage);
         }
       },
@@ -365,13 +356,14 @@ export const useStore = create<StoreState>()(
       },
 
       // Message actions
-      sendMessage: async (content) => {
+      sendMessage: async (content, guestName) => {
         const { currentChannel } = get();
         if (!currentChannel) return;
 
         try {
           const { data } = await api.post(`/messages/channel/${currentChannel._id}`, {
-            content
+            content,
+            guestName
           });
 
           set((state) => ({
@@ -499,7 +491,9 @@ export const useStore = create<StoreState>()(
 
           throw new Error(errorMessage);
         }
-      }
+      },
+
+      setGuestName: (name) => set({ guestName: name })
     }),
     {
       name: 'chappy-store',

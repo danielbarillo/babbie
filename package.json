@@ -16,10 +16,13 @@
     "node": ">=18.0.0"
   },
   "devDependencies": {
-    "concurrently": "^8.0.1",
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^20.11.24",
+    "concurrently": "^8.0.1",
     "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.4"
   }
 }
