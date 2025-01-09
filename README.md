@@ -18,6 +18,13 @@ A real-time chat application with support for channels and direct messages.
    - Username: test
    - Password: password
 
+## Routes
+- /login - Login page
+- /register - Registration page
+- /chat - Main chat interface
+- /messages - Direct messages
+- /messages/:userId - Specific direct message conversation
+
 ## Development Setup
 
 1. Clone the repository

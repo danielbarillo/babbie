@@ -18,7 +18,7 @@ export function Login() {
     e.preventDefault();
     try {
       await login({ username, password });
-      navigate("/");
+      navigate("/chat");
     } catch (error) {
       console.error("Login failed:", error);
     }
@@ -39,7 +39,7 @@ export function Login() {
       setGuestName(name);
       await loginAsGuest();
       setShowGuestDialog(false);
-      navigate("/");
+      navigate("/chat");
     } catch (error) {
       console.error("Guest login failed:", error);
     }
