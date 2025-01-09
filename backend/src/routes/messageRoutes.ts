@@ -16,45 +16,34 @@ router.get('/channel/:channelId', attachUserState, async (req: AuthRequest, res)
       return res.status(404).json({ message: 'Channel not found' });
     }
 
-    // Check if channel is private
-    if (channel.isPrivate) {
-      if (!req.userState || !isAuthenticated(req.userState)) {
-        return res.status(401).json({ message: 'Authentication required' });
-      }
-      const userId = new mongoose.Types.ObjectId(req.userState._id);
-      if (!channel.members.some(id => id.equals(userId))) {
-        return res.status(403).json({ message: 'Access denied' });
-      }
-    }
-
     // Hämta alla meddelanden för kanalen
     const messages = await Message.find({
       channel: req.params.channelId
     })
-      .sort({ createdAt: 1 }) // Sortera äldst först
-      .populate({
-        path: 'sender',
-        select: 'username',
-        model: 'User'
-      })
-      .lean()
+      .sort({ createdAt: 1 })
+      .populate('sender', 'username')  // Förenkla populate
       .exec();
 
-    // Formatera meddelanden med korrekt typning
-    const formattedMessages = messages.map(msg => ({
-      ...msg,
-      sender: typeof msg.sender === 'object' && 'type' in msg.sender
-        ? msg.sender  // Gästanvändare
-        : {
-            _id: (msg.sender as any)?._id,
-            username: (msg.sender as any)?.username || 'Unknown User'
-          }
-    }));
+    // Enklare formatering av meddelanden
+    const formattedMessages = messages.map(msg => {
+      // Om det är ett gästmeddelande
+      if (msg.sender && typeof msg.sender === 'object' && 'type' in msg.sender) {
+        return msg;
+      }
+      // Om det är ett användarmeddelande
+      return {
+        ...msg.toObject(),
+        sender: {
+          _id: msg.sender?._id,
+          username: msg.sender?.username || 'Unknown User'
+        }
+      };
+    });
 
-    console.log(`Fetched ${formattedMessages.length} messages for channel ${req.params.channelId}`);
+    console.log('Messages:', formattedMessages);
     res.json(formattedMessages);
   } catch (error) {
-    console.error('Error fetching messages:', error);
+    console.error('Error details:', error);
     res.status(500).json({ message: 'Error fetching messages' });
   }
 });
