@@ -1,7 +1,5 @@
 # Chappy - Modern Chat Application
 
-A real-time chat application with support for channels and direct messages.
-
 ## Features
 - Public and private channels
 - Direct messaging
@@ -9,23 +7,28 @@ A real-time chat application with support for channels and direct messages.
 - User authentication
 - Real-time messaging
 
-## Test Users
-1. Admin user:
-   - Username: admin
-   - Password: admin123
-
-2. Test user:
-   - Username: test
-   - Password: password
-
 ## Routes
-- /login - Login page
+- /login - Login page (startsida)
 - /register - Registration page
 - /chat - Main chat interface
 - /messages - Direct messages
-- /messages/:userId - Specific direct message conversation
+- /messages/:userId - Specific DM conversation
 
-## Development Setup
+## Test Users
+1. Admin:
+   - Username: admin
+   - Password: admin123
+2. Test:
+   - Username: test
+   - Password: password
+
+## Guest Access
+1. Click "Continue as Guest"
+2. Enter display name
+3. Access public channels
+4. Send messages with your guest name
+
+## Development
 
 1. Clone the repository
 2. Install dependencies:

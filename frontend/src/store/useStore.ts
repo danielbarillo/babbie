@@ -245,7 +245,10 @@ export const useStore = create<StoreState>()(
       loginAsGuest: async () => {
         try {
           set({ isLoading: true, error: null });
-          console.log("Starting guest login"); // Lägg till för debugging
+          console.log("Starting guest login");
+
+          const { guestName } = get();
+          console.log("Current guest name:", guestName);
 
           const guestUser: GuestUser = {
             type: 'guest'
@@ -264,20 +267,10 @@ export const useStore = create<StoreState>()(
             isInitialized: true
           });
 
-          console.log("Guest login successful"); // Lägg till för debugging
-          // Fetch public channels for guest
           await get().fetchChannels();
-
         } catch (error: any) {
           console.error('Guest login error:', error);
-          const errorMessage = error.message || 'Failed to login as guest';
-          set({
-            error: errorMessage,
-            isLoading: false,
-            userState: null,
-            token: null
-          });
-          throw new Error(errorMessage);
+          throw error;
         }
       },
 
@@ -501,7 +494,10 @@ export const useStore = create<StoreState>()(
         }
       },
 
-      setGuestName: (name) => set({ guestName: name })
+      setGuestName: (name) => {
+        console.log('Setting guest name in store:', name);
+        set({ guestName: name });
+      }
     }),
     {
       name: 'chappy-store',

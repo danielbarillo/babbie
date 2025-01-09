@@ -13,8 +13,15 @@ export function MessageInput() {
     if (!message.trim() || !currentChannel) return;
 
     try {
+      const currentGuestName = useStore.getState().guestName;
+      console.log('Current guest name when sending:', currentGuestName); // Debug
+
       if (userState?.type === 'guest') {
-        await sendMessage(message.trim(), guestName);
+        if (!currentGuestName) {
+          console.error('No guest name found!');
+          return;
+        }
+        await sendMessage(message.trim(), currentGuestName);
       } else {
         await sendMessage(message.trim());
       }
