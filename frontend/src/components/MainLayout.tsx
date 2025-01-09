@@ -25,6 +25,8 @@ export function MainLayout() {
     navigate('/login');
   };
 
+  const isAuthenticated = userState?.type === 'authenticated';
+
   if (!userState) {
     return null;
   }
