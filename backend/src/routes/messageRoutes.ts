@@ -53,8 +53,10 @@ router.post('/channel/:channelId', attachUserState, async (req: AuthRequest, res
     }
 
     // Allow guest messages in public channels
-    if (channel.isPrivate && (!req.userState || !isAuthenticated(req.userState))) {
-      return res.status(401).json({ message: 'Authentication required for private channels' });
+    if (channel.isPrivate) {
+      if (!req.userState || !isAuthenticated(req.userState)) {
+        return res.status(401).json({ message: 'Authentication required for private channels' });
+      }
     }
 
     const message = new Message({
