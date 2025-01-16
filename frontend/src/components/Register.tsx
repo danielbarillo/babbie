@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useStore } from "../store/useStore";
+import { Dialog } from "./ui/dialog";
+import { SuccessDialog, SuccessDialogContent } from "./ui/success-dialog"
 
 export default function Register() {
   const navigate = useNavigate();
@@ -19,6 +21,7 @@ export default function Register() {
     confirmPassword?: string;
     general?: string;
   }>({});
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
   const validateForm = () => {
     const newErrors: typeof errors = {};
@@ -76,7 +79,16 @@ export default function Register() {
         email: formData.email,
         password: formData.password
       });
-      navigate('/chat');
+
+      // Visa success dialog
+      setShowSuccessDialog(true);
+
+      // Navigera efter 2 sekunder
+      setTimeout(() => {
+        setShowSuccessDialog(false);
+        navigate('/chat');
+      }, 2000);
+
     } catch (error) {
       setErrors(prev => ({
         ...prev,
@@ -261,6 +273,18 @@ export default function Register() {
           </div>
         </div>
       </div>
+
+      {/* Success Dialog */}
+      <SuccessDialog open={showSuccessDialog}>
+        <SuccessDialogContent>
+          <div className="text-center">
+            <h2 className="text-2xl font-semibold mb-2">✨ Konto skapat!</h2>
+            <p className="text-muted-foreground">
+              Ditt konto har skapats och du loggas nu in automatiskt.
+            </p>
+          </div>
+        </SuccessDialogContent>
+      </SuccessDialog>
     </div>
   );
 }

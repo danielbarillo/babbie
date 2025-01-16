@@ -52,7 +52,11 @@ interface DirectMessage {
 interface Conversation {
   _id: string;
   username: string;
-  lastMessage: DirectMessage;
+  isOnline?: boolean;
+  lastMessage?: {
+    content: string;
+    createdAt: string;
+  };
 }
 
 interface StoreState {

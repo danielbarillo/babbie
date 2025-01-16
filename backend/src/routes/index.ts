@@ -4,6 +4,7 @@ import channelRoutes from './channelRoutes';
 import messageRoutes from './messageRoutes';
 import directMessageRoutes from './directMessageRoutes';
 import { getUsers } from '../controllers/userController';
+import { requireAuth } from '../middleware/auth';
 
 const router = express.Router();
 
@@ -25,6 +26,6 @@ router.use('/messages', messageRoutes);
 router.use('/dm', directMessageRoutes);
 
 // User routes
-router.get('/users', getUsers);
+router.get('/users', requireAuth, getUsers);
 
 export default router;
