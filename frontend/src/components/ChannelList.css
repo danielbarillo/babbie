@@ -1,0 +1,27 @@
+.channels-container {
+  padding: 1rem;
+}
+
+.channel-item {
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 4px;
+}
+
+.channel-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.channel-item.selected {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.channel-name {
+  font-weight: bold;
+}
+
+.channel-description {
+  font-size: 0.9em;
+  color: #666;
+  margin-left: 0.5rem;
+}
