@@ -1,43 +1,47 @@
-import { useState, FormEvent } from 'react';
-import { useStore } from '../store/useStore';
+import { useState } from 'react';
+import { useSocket } from '../hooks/useSocket';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Send } from 'lucide-react';
 
-export function DirectMessageInput() {
-  const { sendDirectMessage, currentConversation, error } = useStore();
-  const [content, setContent] = useState('');
+interface DirectMessageInputProps {
+  currentConversation: {
+    _id: string;
+    username: string;
+  };
+}
 
-  const handleSubmit = async (e: FormEvent) => {
+export function DirectMessageInput({ currentConversation }: DirectMessageInputProps) {
+  const [message, setMessage] = useState('');
+  const { sendDirectMessage } = useSocket();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!content.trim() || !currentConversation) return;
+    if (!message.trim()) return;
 
     try {
-      await sendDirectMessage(content.trim(), currentConversation._id);
-      setContent('');
+      await sendDirectMessage(message.trim(), currentConversation._id);
+      setMessage('');
     } catch (error) {
       console.error('Failed to send message:', error);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-4 border-t bg-background">
-      {error && (
-        <div className="mb-2 p-2 text-sm text-destructive bg-destructive/10 rounded">
-          {error}
-        </div>
-      )}
-      <div className="flex gap-2">
-        <Input
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="Type a message..."
-          className="flex-1"
-        />
-        <Button type="submit" size="icon" disabled={!content.trim()}>
-          <Send className="h-4 w-4" />
-        </Button>
-      </div>
+    <form onSubmit={handleSubmit} className="flex gap-2 p-4 border-t">
+      <Input
+        type="text"
+        value={message}
+        onChange={(e) => setMessage(e.target.value)}
+        placeholder="Type a message..."
+        className="flex-1"
+      />
+      <Button
+        type="submit"
+        disabled={!message.trim()}
+        variant="default"
+      >
+        Send
+      </Button>
     </form>
   );
 }

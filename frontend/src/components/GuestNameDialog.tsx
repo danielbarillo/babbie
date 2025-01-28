@@ -1,47 +1,53 @@
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
-import { Input } from './ui/input';
+import React, { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
-import { useStore } from '../store/useStore';
+import { Input } from './ui/input';
 
 interface GuestNameDialogProps {
-  onSubmit: (name: string) => void;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (name: string) => Promise<void>;
 }
 
-export function GuestNameDialog({ onSubmit, onClose }: GuestNameDialogProps) {
-  console.log("Rendering GuestNameDialog");
+export function GuestNameDialog({ open, onOpenChange, onSubmit }: GuestNameDialogProps) {
+  const [name, setName] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [inputValue, setInputValue] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (inputValue.trim()) {
-      onSubmit(inputValue.trim());
+    if (!name.trim() || isSubmitting) return;
+
+    try {
+      setIsSubmitting(true);
+      await onSubmit(name);
+      onOpenChange(false);
+      setName('');
+    } catch (error) {
+      console.error('Failed to submit guest name:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <Dialog open={true} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Welcome to Chappy!</DialogTitle>
-          <DialogDescription>
-            Choose a display name to start chatting
-          </DialogDescription>
+          <DialogTitle>Enter Guest Name</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
-            placeholder="Enter your display name"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Enter your name"
             required
             minLength={2}
-            maxLength={20}
-            autoFocus
+            maxLength={30}
+            disabled={isSubmitting}
           />
-          <Button type="submit" className="w-full" disabled={!inputValue.trim()}>
-            Start Chatting
+          <Button type="submit" disabled={isSubmitting || !name.trim()}>
+            {isSubmitting ? 'Loading...' : 'Continue as Guest'}
           </Button>
         </form>
       </DialogContent>

@@ -1,9 +1,29 @@
-export interface User {
-  _id: string;
-  id: string;
-  username: string;
-  email: string;
+export type UserStatus = 'online' | 'offline' | 'away';
+
+export interface UserPreferences {
+  theme: 'light' | 'dark';
+  notifications: boolean;
+  language: string;
 }
+
+export interface BaseUser {
+  username: string;
+  status: UserStatus;
+  lastSeen?: string;
+}
+
+export interface AuthenticatedUser extends BaseUser {
+  _id: string;
+  email?: string;
+  type: 'authenticated';
+  preferences: UserPreferences;
+}
+
+export interface GuestUser extends BaseUser {
+  type: 'guest';
+}
+
+export type User = AuthenticatedUser | GuestUser;
 
 export interface Channel {
   _id: string;

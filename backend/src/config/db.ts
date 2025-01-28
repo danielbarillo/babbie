@@ -1,24 +1,24 @@
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-
-dotenv.config();
+import { config } from './config';
 
 export const connectDB = async () => {
   try {
-    const mongoURI = process.env.MONGODB_URI;
     console.log('Attempting to connect to MongoDB...');
 
-    if (!mongoURI) {
+    if (!config.mongoUri) {
       throw new Error('MONGODB_URI is not defined in environment variables');
     }
 
-    await mongoose.connect(mongoURI, {
-      serverSelectionTimeoutMS: 5000,
+    await mongoose.connect(config.mongoUri, {
+      serverSelectionTimeoutMS: 10000,
       socketTimeoutMS: 45000,
+      dbName: 'chappy',
+      retryWrites: true,
+      w: 'majority'
     });
 
     mongoose.connection.on('connected', () => {
-      console.log(`MongoDB Connected: ${mongoose.connection.host}`);
+      console.log('MongoDB Connected successfully');
     });
 
     mongoose.connection.on('error', (err) => {
@@ -31,6 +31,13 @@ export const connectDB = async () => {
 
   } catch (error) {
     console.error('MongoDB connection error:', error);
-    console.log('Check if your MongoDB Atlas credentials are correct and IP is whitelisted');
+    // Don't expose sensitive information in production
+    if (config.nodeEnv === 'development') {
+      console.error('Connection details:', {
+        uri: config.mongoUri.replace(/\/\/([^:]+):([^@]+)@/, '//USER:PASS@'),
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+    throw error;
   }
 };

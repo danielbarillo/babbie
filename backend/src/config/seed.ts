@@ -15,7 +15,8 @@ export const seedData = async () => {
       adminUser = await User.create({
         username: 'admin',
         email: 'admin@example.com',
-        password: hashedPassword
+        password: hashedPassword,
+        isAdmin: true
       });
       console.log('Admin user created with ID:', adminUser._id);
     }
@@ -45,6 +46,37 @@ export const seedData = async () => {
         createdBy: adminUser._id
       });
       console.log('Private channel created successfully');
+    }
+
+    // Skapa #nyheter kanalen om den inte finns
+    const newsChannel = await Channel.findOne({ name: 'nyheter' });
+    if (!newsChannel) {
+      await Channel.create({
+        name: 'nyheter',
+        description: 'Nyhetskanal - endast för registrerade användare',
+        isPrivate: true,
+        members: [adminUser._id, testUser._id],
+        createdBy: adminUser._id
+      });
+      console.log('#nyheter channel created successfully');
+    } else if (!newsChannel.isPrivate) {
+      // Update existing nyheter channel to be private if it's not already
+      newsChannel.isPrivate = true;
+      await newsChannel.save();
+      console.log('#nyheter channel updated to private');
+    }
+
+    // Skapa en begränsad kanal om den inte finns
+    const restrictedChannel = await Channel.findOne({ name: 'announcements' });
+    if (!restrictedChannel) {
+      await Channel.create({
+        name: 'announcements',
+        description: 'Important announcements - only authenticated users can post',
+        isRestricted: true,
+        members: [adminUser._id],
+        createdBy: adminUser._id
+      });
+      console.log('Restricted announcements channel created successfully');
     }
 
     console.log('Seed data created successfully');

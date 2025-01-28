@@ -10,7 +10,13 @@
     "build-backend": "cd backend && npm run build",
     "build": "npm run build-backend && npm run build-frontend",
     "start": "cd backend && npm start",
-    "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm run dev\""
+    "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm run dev\"",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd frontend && npm test",
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "lint:backend": "cd backend && npm run lint",
+    "lint:frontend": "cd frontend && npm run lint"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -20,10 +26,14 @@
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^20.11.24",
     "concurrently": "^8.0.1",
-    "typescript": "^5.7.2"
+    "typescript": "^5.3.3"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.4",
-    "@radix-ui/themes": "^3.1.6"
+    "@radix-ui/themes": "^3.1.6",
+    "axios": "^1.7.9",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
+    "sonner": "^1.7.2"
   }
 }

@@ -20,12 +20,14 @@ export const setupDefaultChannels = async () => {
       {
         name: 'allmänt',
         description: 'Allmän diskussion för alla användare',
-        isPrivate: false
+        isPrivate: false,
+        isRestricted: false
       },
       {
         name: 'nyheter',
-        description: 'Nyheter och uppdateringar',
-        isPrivate: false
+        description: 'Nyheter och uppdateringar - endast för registrerade användare',
+        isPrivate: false,
+        isRestricted: true
       }
     ]
 
@@ -37,6 +39,10 @@ export const setupDefaultChannels = async () => {
           createdBy: adminUser._id,
           members: [adminUser._id]
         })
+      } else if (channel.name === 'nyheter' && !exists.isRestricted) {
+        // Update existing nyheter channel to be restricted if it's not already
+        exists.isRestricted = true;
+        await exists.save();
       }
     }
 

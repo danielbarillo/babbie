@@ -1,13 +1,18 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useStore } from "../store/useStore";
+import { useStore } from "../store";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Card } from "../components/ui/card";
+import type { StoreState } from "../types/store";
 
 export function Register() {
   const navigate = useNavigate();
-  const { register, error } = useStore();
+  const { register, error } = useStore((state: StoreState) => ({
+    register: state.auth.register,
+    error: state.auth.error
+  }));
+
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -17,10 +22,11 @@ export function Register() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await register(formData);
-      navigate("/");
-    } catch (error) {
-      console.error("Registration failed:", error);
+      const { username, email, password } = formData;
+      await register(email, password, username);
+      navigate("/chat");
+    } catch (err) {
+      console.error("Registration failed:", err);
     }
   };
 
@@ -35,13 +41,19 @@ export function Register() {
     <div className="min-h-screen flex items-center justify-center bg-[#0B1120]">
       <Card className="w-full max-w-md p-8 space-y-6 bg-[#1a2733] border-[#1f1f1f]">
         <h1 className="text-2xl font-bold text-center text-gray-200">
-          Registrera dig på Chappy
+          Register for Chappy
         </h1>
+
+        {error && (
+          <div className="p-3 text-sm text-destructive bg-destructive/10 rounded">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <label htmlFor="username" className="text-sm text-gray-400">
-              Användarnamn
+              Username
             </label>
             <Input
               id="username"
@@ -56,7 +68,7 @@ export function Register() {
 
           <div className="space-y-2">
             <label htmlFor="email" className="text-sm text-gray-400">
-              E-post
+              Email
             </label>
             <Input
               id="email"
@@ -71,7 +83,7 @@ export function Register() {
 
           <div className="space-y-2">
             <label htmlFor="password" className="text-sm text-gray-400">
-              Lösenord
+              Password
             </label>
             <Input
               id="password"
@@ -84,25 +96,13 @@ export function Register() {
             />
           </div>
 
-          {error && <div className="text-red-400 text-sm">{error}</div>}
-
           <Button
             type="submit"
-            className="w-full bg-[#1f1f1f] hover:bg-[#2a2a2a] text-gray-200"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
           >
-            Registrera
+            Register
           </Button>
         </form>
-
-        <div className="text-center text-sm text-gray-400">
-          Har du redan ett konto?{" "}
-          <button
-            onClick={() => navigate("/login")}
-            className="text-blue-400 hover:underline"
-          >
-            Logga in
-          </button>
-        </div>
       </Card>
     </div>
   );

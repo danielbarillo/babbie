@@ -1,101 +1,78 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import { connectDB } from './config/db';
-import routes from './routes';
 import cors from 'cors';
+import { createServer } from 'http';
+import { WebSocketService } from './services/WebSocketService';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { apiLimiter } from './middleware/rateLimiter';
+import authRoutes from './routes/auth';
+import channelRoutes from './routes/channels';
+import messageRoutes from './routes/messages';
+import userRoutes from './routes/users';
+import dmRoutes from './routes/directMessages';
 import mongoose from 'mongoose';
-import { seedData } from './config/seed';
-import { AuthRequest } from './types/express';
 
 dotenv.config();
 
 const app = express();
+const httpServer = createServer(app);
+let wsService: WebSocketService;
 
 // Parse JSON bodies
 app.use(express.json());
 
 // CORS configuration
-app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'https://chappy-frontend.onrender.com'
-  ],
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
-}));
+};
 
-// Request logging middleware (AFTER body parsing)
-app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path}`, {
-    body: req.body,
-    query: req.query,
-    headers: req.headers
-  });
-  next();
-});
+app.use(cors(corsOptions));
 
-// Request logging middleware
-app.use((req: AuthRequest, res, next) => {
-  console.log('Incoming request:', {
-    method: req.method,
-    path: req.path,
-    body: req.body,
-    headers: req.headers,
-    userState: req.userState // Nu ska TypeScript vara nöjd
-  });
-  next();
-});
+// Rate limiting
+app.use(apiLimiter);
 
-// Basic health check route
-app.get('/health', (_, res) => {
-  res.json({ status: 'ok', message: 'Server is running' });
-});
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/channels', channelRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/dm', dmRoutes);
 
-// Mount routes directly (no /api prefix)
-app.use(routes);
-
-// 404 handler - must be before error handler
-app.use((req, res) => {
-  console.log('404 Not Found:', req.method, req.path);
-  res.status(404).json({ message: 'Not Found' });
+// Add this after other routes but before error handlers
+app.get('/api/test/db', async (req, res) => {
+  try {
+    const dbStatus = mongoose.connection.readyState;
+    const status = {
+      mongodb: dbStatus === 1 ? 'connected' : 'disconnected',
+      server: 'running'
+    };
+    res.json(status);
+  } catch (error) {
+    res.status(500).json({ error: 'Database connection test failed' });
+  }
 });
 
 // Error handling
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Error:', {
-    message: err.message,
-    stack: err.stack,
-    details: err
-  });
+app.use(notFoundHandler);
+app.use(errorHandler);
 
-  res.status(err.status || 500).json({
-    message: err.message || 'Internal server error',
-    details: process.env.NODE_ENV === 'development' ? err.stack : undefined
-  });
-});
-
-const startServer = async () => {
+// Initialize database and WebSocket service
+export const initializeServer = async () => {
   try {
     await connectDB();
-    await seedData();
+    console.log('Connected to MongoDB');
 
-    if (mongoose.connection.readyState === 1) {
-      const PORT = process.env.PORT || 5001;
-      app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
-        console.log(`MongoDB connected: ${mongoose.connection.host}`);
-      });
-    } else {
-      console.error('Failed to connect to MongoDB. Server not started.');
-      process.exit(1);
-    }
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
+    // Initialize WebSocket after DB connection
+    wsService = new WebSocketService(httpServer);
+    console.log('WebSocket service initialized');
+  } catch (err) {
+    console.error('Failed to initialize server:', err);
+    throw err;
   }
 };
 
-startServer();
-
-export default app;
+export { app, httpServer, wsService };

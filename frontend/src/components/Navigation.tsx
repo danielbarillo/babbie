@@ -1,8 +1,10 @@
-import { useAuth } from '../contexts/AuthContext';
+import React from 'react';
+import { useStore } from '../store/useStore';
+import { Button } from './ui/button';
 import { useNavigate } from 'react-router-dom';
 
-export default function Navigation() {
-  const { user, logout } = useAuth();
+export function Navigation() {
+  const { userState, logout } = useStore();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -11,33 +13,15 @@ export default function Navigation() {
   };
 
   return (
-    <nav className="bg-gray-800 text-white p-4">
-      <div className="container mx-auto flex justify-between items-center">
-        <div className="font-bold text-xl">Chappy</div>
-        {user ? (
-          <button
-            onClick={handleLogout}
-            className="bg-red-600 px-4 py-2 rounded hover:bg-red-700"
-          >
-            Logout
-          </button>
-        ) : (
-          <div className="space-x-4">
-            <button
-              onClick={() => navigate('/login')}
-              className="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700"
-            >
-              Login
-            </button>
-            <button
-              onClick={() => navigate('/register')}
-              className="bg-green-600 px-4 py-2 rounded hover:bg-green-700"
-            >
-              Register
-            </button>
-          </div>
-        )}
+    <nav className="flex justify-between items-center p-4 border-b">
+      <div className="flex items-center gap-4">
+        <span className="font-semibold">
+          {userState?.type === 'authenticated' ? userState.username : 'Guest'}
+        </span>
       </div>
+      <Button variant="ghost" onClick={handleLogout}>
+        Logout
+      </Button>
     </nav>
   );
 }

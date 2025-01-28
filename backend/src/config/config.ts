@@ -17,4 +17,7 @@ export const config = {
   jwtSecret: process.env.JWT_SECRET,
   corsOrigins: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:5173'],
   nodeEnv: process.env.NODE_ENV || 'development'
-};
+} as const;
+
+// Add type for the config
+export type Config = typeof config;

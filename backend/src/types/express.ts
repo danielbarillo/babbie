@@ -1,40 +1,31 @@
 import { Request, Response, NextFunction } from 'express';
-import { UserDocument } from '../models/User';
-import mongoose from 'mongoose';
+import { UserDocument, UserState, GuestUser, AuthenticatedUser } from './common';
+import { Types } from 'mongoose';
+import { JwtPayload } from 'jsonwebtoken';
 
-// Base types
-export interface AuthenticatedUser extends UserDocument {
-  _id: mongoose.Types.ObjectId;
-  username: string;
-  email: string;
-}
-
-export interface GuestUser {
-  type: 'guest';
-  username: string;
-}
-
-// Request types
 export interface AuthRequest extends Request {
-  userState?: AuthenticatedUser | GuestUser | null;
-  user?: AuthenticatedUser;
+  userState?: UserState;
+  user?: UserDocument;
 }
-
-// Handler types
-export type RequestHandler = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => Promise<any> | any;
-
-export type AuthRequestHandler = (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
-) => Promise<any> | any;
 
 export type RouteHandler = (
   req: AuthRequest,
   res: Response,
   next?: NextFunction
-) => Promise<any> | any;
+) => Promise<void | Response> | void | Response;
+
+export type RequestHandler = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => Promise<void> | void;
+
+export type AuthRequestHandler = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => Promise<void> | void;
+
+export interface AuthenticatedRequest extends Request {
+  user?: JwtPayload;
+}

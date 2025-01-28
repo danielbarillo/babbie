@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { User } from '../models/User';
 import { schemas } from '../validation/schemas';
 import { AuthRequest } from '../middleware/auth';
+import type { RouteHandler } from '../types/express';
 
 export const register = async (req: Request, res: Response) => {
   try {
@@ -48,7 +49,7 @@ export const register = async (req: Request, res: Response) => {
     res.status(201).json({
       token,
       user: {
-        id: user._id,
+        _id: user._id,
         username: user.username,
         email: user.email
       }
@@ -96,7 +97,7 @@ export const login = async (req: Request, res: Response) => {
     res.json({
       token,
       user: {
-        id: user._id,
+        _id: user._id,
         username: user.username,
         email: user.email
       }
@@ -110,31 +111,20 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
-export const me = async (req: AuthRequest, res: Response) => {
+export const me: RouteHandler = async (req: AuthRequest, res: Response) => {
   try {
-    const user = await User.findById(req.user?._id);
-    if (!user) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'User not found'
-      });
+    if (!req.user) {
+      return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    res.json({
-      status: 'success',
-      data: {
-        user: {
-          _id: user._id,
-          username: user.username,
-          email: user.email
-        }
-      }
-    });
+    const user = await User.findById(req.user._id).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json(user);
   } catch (error) {
-    console.error('Me endpoint error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Error fetching user data'
-    });
+    console.error('Error in me controller:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };

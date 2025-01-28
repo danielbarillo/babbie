@@ -63,6 +63,7 @@ export const schemas = {
           'string.empty': 'Channel name is required'
         }),
       isPrivate: Joi.boolean().default(false),
+      isRestricted: Joi.boolean().default(false),
       description: Joi.string().max(200).allow('').messages({
         'string.max': 'Description cannot exceed 200 characters'
       })

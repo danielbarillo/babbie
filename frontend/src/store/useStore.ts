@@ -1,514 +1,297 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
-import api from '../api/axios';
+import { devtools, persist } from 'zustand/middleware'
+import type { StoreState, ChatState, AuthState } from '../types/store';
+import type { Channel, Message } from '../types/messages';
+import { createAuthSlice } from './slices/authSlice';
+import { createChatSlice } from './slices/chatSlice';
+import { createDirectMessageSlice } from './slices/directMessageSlice';
+import type { User } from '../types/user';
 
-interface ApiError extends Error {
-  response?: {
-    data?: {
-      message?: string
-      details?: string
-    }
-    status?: number
+type StoreSet = (
+  partial: StoreState | Partial<StoreState> | ((state: StoreState) => StoreState | Partial<StoreState>),
+  replace?: boolean
+) => void;
+
+type StoreGet = () => StoreState;
+
+// Update ChatState type to include lastFetch and clearState
+declare module '../types/store' {
+  interface ChatState {
+    lastFetch: number;
+    clearState: () => void;
+    channels: Channel[];
+    currentChannel: Channel | null;
+    messages: Message[];
+    isLoading: boolean;
+    error: string | null;
+    fetchChannels: () => Promise<void>;
+    sendMessage: (content: string, channelId: string) => Promise<void>;
+    fetchMessages: (channelId: string) => Promise<void>;
+    joinChannel: (channelId: string) => Promise<void>;
+    leaveChannel: (channelId: string) => Promise<void>;
+    createChannel: (data: { name: string; isPrivate: boolean }) => Promise<void>;
+    setCurrentChannel: (channel: Channel) => void;
   }
 }
 
-// Define user states
-type AuthenticatedUser = {
-  _id: string
-  username: string
-  email: string
-  type: 'authenticated'
-}
+export const useStore = create<StoreState>()((...args) => ({
+  ...createAuthSlice(...args),
+  ...createChatSlice(...args),
+  ...createDirectMessageSlice(...args),
+  logout: async () => {
+    try {
+      await authApi.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      localStorage.removeItem('token');
+      set(state => ({ auth: { ...state.auth, user: null, error: null } }));
+    }
+  }
+}));
 
-type GuestUser = {
-  type: 'guest'
-}
+// Convenience hooks
+export const useAuth = () => useStore(state => state.auth);
+export const useChat = () => useStore(state => state.chat);
 
-type UserState = AuthenticatedUser | GuestUser
-
-interface Channel {
-  _id: string
-  name: string
-  description?: string
-  isPrivate: boolean
-  members: string[]
-}
-
-interface Message {
-  _id: string
-  content: string
-  sender: AuthenticatedUser | { username: string; type: 'guest' }
-  createdAt: string
-}
-
-interface DirectMessage {
-  _id: string;
-  content: string;
-  sender: AuthenticatedUser;
-  recipient: AuthenticatedUser;
-  createdAt: string;
-}
-
-interface Conversation {
-  _id: string;
-  username: string;
-  isOnline?: boolean;
-  lastMessage?: {
-    content: string;
-    createdAt: string;
+// User selector with profile management
+export const useUser = () => {
+  const store = useStore();
+  return {
+    user: store.auth.user,
+    isLoading: store.auth.isLoading,
+    updateUser: store.auth.updateUser,
+    userState: store.auth.user ? {
+      type: 'authenticated' as const,
+      userId: store.auth.user._id,
+      username: store.auth.user.username,
+      email: store.auth.user.email,
+      preferences: store.auth.user.preferences
+    } : {
+      type: 'guest' as const,
+      username: 'Guest'
+    },
+    logout: store.auth.logout
   };
-}
+};
 
-interface StoreState {
-  userState: UserState | null
-  token: string | null
-  error: string | null
-  currentChannel: Channel | null
-  currentConversation: Conversation | null
-  channels: Channel[]
-  messages: Message[]
-  directMessages: DirectMessage[]
-  conversations: Conversation[]
-  isLoading: boolean
-  isInitialized: boolean
-  guestName: string | null
+// Base selectors
+export const useDirectMessage = () => useStore((state) => state.dm);
 
-  // Auth actions
-  login: (credentials: { username: string; password: string }) => Promise<void>
-  loginAsGuest: () => Promise<void>
-  register: (userData: { username: string; email: string; password: string }) => Promise<void>
-  logout: () => void
-  clearError: () => void
-  checkAuth: () => Promise<boolean>
+// Extended chat selector with combined functionality
+export const useChatFeatures = () => useStore((state) => ({
+  currentChannel: state.chat.currentChannel,
+  messages: state.chat.messages,
+  channels: state.chat.channels,
+  isLoading: state.chat.isLoading,
+  error: state.chat.error,
+  sendMessage: state.chat.sendMessage,
+  fetchMessages: state.chat.fetchMessages,
+  joinChannel: state.chat.joinChannel,
+  leaveChannel: state.chat.leaveChannel,
+  fetchChannels: state.chat.fetchChannels,
+  createChannel: state.chat.createChannel,
+  setCurrentChannel: state.chat.setCurrentChannel,
+  clearState: state.chat.clearState
+}));
 
-  // Channel actions
-  fetchChannels: () => Promise<void>
-  createChannel: (channelData: { name: string; isPrivate: boolean; description?: string }) => Promise<void>
-  joinChannel: (channelId?: string) => Promise<void>
-  leaveChannel: (channelId: string) => Promise<void>
+export const chatSlice = (set: StoreSet, get: StoreGet) => ({
+  chat: {
+    channels: [],
+    currentChannel: null,
+    messages: [],
+    isLoading: false,
+    error: null,
+    lastFetch: 0,
 
-  // Message actions
-  sendMessage: (content: string, guestName?: string) => Promise<void>
-  fetchMessages: (channelId: string) => Promise<void>
+    fetchChannels: async () => {
+      const now = Date.now();
+      const minInterval = 5000; // 5 seconds minimum between fetches
+      const lastFetch = get().chat.lastFetch || 0;
 
-  // DM actions
-  fetchConversations: () => Promise<void>
-  fetchDirectMessages: (userId: string) => Promise<void>
-  sendDirectMessage: (content: string, recipientId: string) => Promise<void>
-  setCurrentConversation: (conversation: Conversation | null) => void
+      // If we've fetched recently, skip this fetch
+      if (now - lastFetch < minInterval) {
+        console.log('Skipping fetch due to rate limit');
+        return;
+      }
 
-  // Guest actions
-  setGuestName: (name: string) => void
-}
+      set({ chat: { ...get().chat, isLoading: true, error: null } });
 
-// Helper function to check if user is authenticated
-const isAuthenticated = (userState: UserState | null): userState is AuthenticatedUser => {
-  return userState?.type === 'authenticated'
-}
-
-export const useStore = create<StoreState>()(
-  persist(
-    (set, get) => ({
-      userState: null,
-      token: null,
-      error: null,
-      currentChannel: null,
-      currentConversation: null,
-      channels: [],
-      messages: [],
-      directMessages: [],
-      conversations: [],
-      isLoading: false,
-      isInitialized: false,
-      guestName: null,
-
-      checkAuth: async () => {
-        try {
-          const token = localStorage.getItem('token');
-          if (!token) {
-            set({ isInitialized: true });
-            return false;
-          }
-
-          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-          const { data } = await api.get('/auth/me');
-
-          if (!data || !data.user) {
-            throw new Error('Invalid response from server');
-          }
-
-          const authenticatedUser: AuthenticatedUser = {
-            _id: data.user._id,
-            username: data.user.username,
-            email: data.user.email,
-            type: 'authenticated'
-          };
-
-          set({
-            userState: authenticatedUser,
-            token,
-            isLoading: false,
-            error: null,
-            isInitialized: true
-          });
-
-          // Fetch initial data
-          await get().fetchChannels();
-          await get().fetchConversations();
-
-          return true;
-        } catch (error) {
-          console.error('Auth check error:', error);
-          // Clear any invalid auth state
-          localStorage.removeItem('token');
-          delete api.defaults.headers.common['Authorization'];
-
-          set({
-            userState: null,
-            token: null,
-            error: null,
-            isLoading: false,
-            isInitialized: true,
-            channels: [],
-            messages: [],
-            conversations: [],
-            currentChannel: null,
-            currentConversation: null,
-            directMessages: []
-          });
-
-          return false;
+      try {
+        const response = await fetch('/api/channels');
+        if (response.status === 429) {
+          throw new Error('Rate limit exceeded. Please wait a moment before trying again.');
         }
-      },
-
-      login: async (credentials) => {
-        try {
-          set({ isLoading: true, error: null });
-          const { data } = await api.post('/auth/login', credentials);
-
-          if (!data || !data.token || !data.user) {
-            throw new Error('Invalid response from server');
-          }
-
-          const authenticatedUser: AuthenticatedUser = {
-            _id: data.user._id,
-            username: data.user.username,
-            email: data.user.email,
-            type: 'authenticated'
-          };
-
-          // Update axios default headers
-          api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
-
-          // Store token in localStorage
-          localStorage.setItem('token', data.token);
-
-          // Update store state
-          set({
-            userState: authenticatedUser,
-            token: data.token,
-            isLoading: false,
-            error: null,
-            isInitialized: true,
-            channels: [],
-            messages: [],
-            conversations: [],
-            currentChannel: null,
-            currentConversation: null,
-            directMessages: []
-          });
-
-          // Fetch initial data
-          await get().fetchChannels();
-          await get().fetchConversations();
-        } catch (error: any) {
-          console.error('Login error:', error);
-          const errorMessage = error.response?.data?.message || error.message || 'Failed to login';
-
-          // Clear any invalid auth state
-          localStorage.removeItem('token');
-          delete api.defaults.headers.common['Authorization'];
-
-          set({
-            error: errorMessage,
-            isLoading: false,
-            userState: null,
-            token: null,
-            channels: [],
-            messages: [],
-            conversations: [],
-            currentChannel: null,
-            currentConversation: null,
-            directMessages: []
-          });
-
-          throw new Error(errorMessage);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch channels: ${response.statusText}`);
         }
-      },
 
-      loginAsGuest: async () => {
-        try {
-          set({ isLoading: true, error: null });
-          console.log("Starting guest login");
-
-          const { guestName } = get();
-          console.log("Current guest name:", guestName);
-
-          const guestUser: GuestUser = {
-            type: 'guest'
-          };
-
-          // Clear any existing auth
-          localStorage.removeItem('token');
-          delete api.defaults.headers.common['Authorization'];
-
-          // Update store state
-          set({
-            userState: guestUser,
-            token: null,
-            isLoading: false,
-            error: null,
-            isInitialized: true
-          });
-
-          await get().fetchChannels();
-        } catch (error: any) {
-          console.error('Guest login error:', error);
-          throw error;
-        }
-      },
-
-      logout: () => {
-        console.log('Logging out...');
-
-        // Clear auth header
-        delete api.defaults.headers.common['Authorization'];
-
-        // Clear localStorage
-        localStorage.removeItem('token');
-
-        // Reset store state
+        const channels = await response.json();
         set({
-          userState: null,
-          token: null,
-          error: null,
-          currentChannel: null,
-          currentConversation: null,
-          channels: [],
-          messages: [],
-          directMessages: [],
-          conversations: [],
-          isLoading: false,
-          isInitialized: true
+          chat: {
+            ...get().chat,
+            channels,
+            isLoading: false,
+            lastFetch: now
+          }
+        });
+      } catch (error) {
+        console.error('Error fetching channels:', error);
+        set({
+          chat: {
+            ...get().chat,
+            error: error instanceof Error ? error.message : 'Failed to fetch channels',
+            isLoading: false
+          }
+        });
+      }
+    },
+
+    sendMessage: async (content: string, channelId: string) => {
+      try {
+        const response = await fetch(`/api/channels/${channelId}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content })
         });
 
-        console.log('Logout complete');
-      },
-
-      clearError: () => set({ error: null }),
-
-      // Channel actions
-      fetchChannels: async () => {
-        try {
-          const { data } = await api.get('/channels');
-          set({ channels: data || [] });
-        } catch (error) {
-          console.error('Failed to fetch channels:', error);
-          set({ channels: [] });
+        if (!response.ok) {
+          throw new Error('Failed to send message');
         }
-      },
 
-      createChannel: async (channelData) => {
-        try {
-          const { data } = await api.post('/channels', channelData);
-          set((state) => ({
-            channels: [...state.channels, data]
-          }));
-          return data;
-        } catch (error) {
-          console.error('Failed to create channel:', error);
-          throw error;
-        }
-      },
-
-      joinChannel: async (channelId) => {
-        if (!channelId) return;
-        try {
-          const { data } = await api.post(`/channels/${channelId}/join`);
-          set({ currentChannel: data });
-          await get().fetchMessages(channelId);
-        } catch (error) {
-          console.error('Failed to join channel:', error);
-        }
-      },
-
-      leaveChannel: async (channelId) => {
-        try {
-          await api.post(`/channels/${channelId}/leave`);
-          set((state) => ({
-            currentChannel: state.currentChannel?._id === channelId ? null : state.currentChannel,
-            channels: state.channels.filter((c) => c._id !== channelId)
-          }));
-        } catch (error) {
-          console.error('Failed to leave channel:', error);
-        }
-      },
-
-      // Message actions
-      sendMessage: async (content, guestName) => {
-        const { currentChannel, userState } = get();
-        if (!currentChannel) return;
-
-        try {
-          console.log('Sending message:', { content, guestName }); // Debug
-          const messageData = {
-            content,
-            ...(userState?.type === 'guest' && { guestName: guestName || 'Guest' })
-          };
-
-          const { data } = await api.post(
-            `/messages/channel/${currentChannel._id}`,
-            messageData
-          );
-
-          set((state) => ({
-            messages: [...state.messages, data]
-          }));
-        } catch (error) {
-          console.error('Failed to send message:', error);
-          throw error;
-        }
-      },
-
-      fetchMessages: async (channelId) => {
-        try {
-          const { data } = await api.get(`/messages/channel/${channelId}`);
-          set({ messages: data || [] });
-        } catch (error) {
-          console.error('Failed to fetch messages:', error);
-          set({ messages: [] });
-        }
-      },
-
-      // DM actions
-      fetchConversations: async () => {
-        try {
-          const { data } = await api.get('/dm/conversations');
-          set({ conversations: data || [] });
-        } catch (error) {
-          console.error('Failed to fetch conversations:', error);
-          set({ conversations: [] });
-        }
-      },
-
-      fetchDirectMessages: async (userId) => {
-        try {
-          const { data } = await api.get(`/dm/${userId}`);
-          set({ directMessages: data || [] });
-        } catch (error) {
-          console.error('Failed to fetch direct messages:', error);
-          set({ directMessages: [] });
-        }
-      },
-
-      sendDirectMessage: async (content, recipientId) => {
-        try {
-          const { data } = await api.post('/dm', { content, recipientId });
-          set((state) => ({
-            directMessages: [...state.directMessages, data]
-          }));
-          await get().fetchConversations();
-        } catch (error) {
-          console.error('Failed to send direct message:', error);
-          throw error;
-        }
-      },
-
-      setCurrentConversation: (conversation) => {
-        set({ currentConversation: conversation });
-        if (conversation) {
-          get().fetchDirectMessages(conversation._id);
-        }
-      },
-
-      register: async (userData) => {
-        try {
-          set({ isLoading: true, error: null });
-          console.log('Attempting registration:', { ...userData, password: '[REDACTED]' });
-
-          const { data } = await api.post('/auth/register', userData);
-          console.log('Registration response:', data);
-
-          if (!data.token || !data.user) {
-            throw new Error('Invalid response from server');
+        const message = await response.json();
+        set({
+          chat: {
+            ...get().chat,
+            messages: [...get().chat.messages, message]
           }
-
-          const authenticatedUser: AuthenticatedUser = {
-            _id: data.user.id,
-            username: data.user.username,
-            email: data.user.email,
-            type: 'authenticated'
-          };
-
-          // Update axios default headers
-          api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
-
-          // Update store state
-          set({
-            userState: authenticatedUser,
-            token: data.token,
-            isLoading: false,
-            error: null,
-            isInitialized: true,
-            channels: [],
-            messages: [],
-            conversations: [],
-            currentChannel: null,
-            currentConversation: null,
-            directMessages: []
-          });
-
-          // Store token in localStorage
-          localStorage.setItem('token', data.token);
-          console.log('Registration successful, user state updated');
-
-          // Fetch initial data
-          await get().fetchChannels();
-          await get().fetchConversations();
-
-        } catch (error) {
-          const apiError = error as ApiError;
-          const errorMessage = apiError.response?.data?.message || apiError.message;
-          console.error('Registration error:', errorMessage);
-
-          set({
-            error: errorMessage,
-            isLoading: false,
-            userState: null,
-            token: null,
-            channels: [],
-            messages: [],
-            conversations: [],
-            currentChannel: null,
-            currentConversation: null,
-            directMessages: []
-          });
-
-          throw new Error(errorMessage);
-        }
-      },
-
-      setGuestName: (name) => {
-        console.log('Setting guest name in store:', name);
-        set({ guestName: name });
+        });
+      } catch (error) {
+        console.error('Error sending message:', error);
+        set({
+          chat: {
+            ...get().chat,
+            error: error instanceof Error ? error.message : 'Failed to send message'
+          }
+        });
       }
-    }),
-    {
-      name: 'chappy-store',
-      partialize: (state) => ({
-        userState: state.userState,
-        token: state.token
-      })
+    },
+
+    fetchMessages: async (channelId: string) => {
+      try {
+        const response = await fetch(`/api/channels/${channelId}/messages`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch messages');
+        }
+
+        const messages = await response.json();
+        set({
+          chat: {
+            ...get().chat,
+            messages
+          }
+        });
+      } catch (error) {
+        console.error('Error fetching messages:', error);
+        set({
+          chat: {
+            ...get().chat,
+            error: error instanceof Error ? error.message : 'Failed to fetch messages'
+          }
+        });
+      }
+    },
+
+    joinChannel: async (channelId: string) => {
+      console.log('Channel ID:', channelId);
+      try {
+        const response = await fetch(`/api/channels/${channelId}/join`, {
+          method: 'POST'
+        });
+        if (!response.ok) {
+          throw new Error('Failed to join channel');
+        }
+      } catch (error) {
+        console.error('Error joining channel:', error);
+        set({
+          chat: {
+            ...get().chat,
+            error: error instanceof Error ? error.message : 'Failed to join channel'
+          }
+        });
+      }
+    },
+
+    leaveChannel: async (channelId: string) => {
+      try {
+        const response = await fetch(`/api/channels/${channelId}/leave`, {
+          method: 'POST'
+        });
+        if (!response.ok) {
+          throw new Error('Failed to leave channel');
+        }
+      } catch (error) {
+        console.error('Error leaving channel:', error);
+        set({
+          chat: {
+            ...get().chat,
+            error: error instanceof Error ? error.message : 'Failed to leave channel'
+          }
+        });
+      }
+    },
+
+    createChannel: async (data: { name: string; isPrivate: boolean }) => {
+      try {
+        const response = await fetch('/api/channels', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (!response.ok) {
+          throw new Error('Failed to create channel');
+        }
+
+        const channel = await response.json();
+        set({
+          chat: {
+            ...get().chat,
+            channels: [...get().chat.channels, channel]
+          }
+        });
+      } catch (error) {
+        console.error('Error creating channel:', error);
+        set({
+          chat: {
+            ...get().chat,
+            error: error instanceof Error ? error.message : 'Failed to create channel'
+          }
+        });
+      }
+    },
+
+    setCurrentChannel: (channel: Channel) => {
+      set({
+        chat: {
+          ...get().chat,
+          currentChannel: channel
+        }
+      });
+    },
+
+    clearState: () => {
+      const currentState = get().chat;
+      set({
+        chat: {
+          ...currentState,
+          channels: [],
+          currentChannel: null,
+          messages: [],
+          isLoading: false,
+          error: null,
+          lastFetch: 0
+        }
+      });
     }
-  )
-);
+  } as ChatState
+});

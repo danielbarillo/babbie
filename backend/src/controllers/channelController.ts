@@ -7,7 +7,7 @@ import { User, UserDocument } from '../models/User';
 
 export const getChannels = async (req: AuthRequest, res: Response) => {
   try {
-    const query = req.user ? {} : { isPrivate: false };
+    const query = req.user ? {} : { isPrivate: false, isRestricted: false };
     const channels = await Channel.find(query)
       .populate('createdBy', 'username')
       .select('-members');
@@ -32,7 +32,7 @@ export const createChannel = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const { name, description, isPrivate } = value;
+    const { name, description, isPrivate, isRestricted } = value;
 
     const existingChannel = await Channel.findOne({ name });
     if (existingChannel) {
@@ -43,6 +43,7 @@ export const createChannel = async (req: AuthRequest, res: Response) => {
       name,
       description,
       isPrivate,
+      isRestricted,
       members: [req.user._id],
       createdBy: req.user._id
     });
@@ -70,6 +71,10 @@ export const joinChannel = async (req: AuthRequest, res: Response) => {
 
     if (channel.members.some(id => id.equals(req.user!._id))) {
       return res.status(400).json({ message: 'Already a member' });
+    }
+
+    if (channel.isRestricted && req.userState?.type !== 'authenticated') {
+      return res.status(403).json({ message: 'This channel is restricted to authenticated users' });
     }
 
     channel.members.push(req.user._id);
@@ -112,7 +117,8 @@ export const getChannel = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ message: 'Authentication required' });
     }
 
-    const channel = await Channel.findById(req.params.channelId);
+    const channelId = req.params.channelId;
+    const channel = await Channel.findById(channelId);
     if (!channel) {
       return res.status(404).json({ message: 'Channel not found' });
     }
@@ -153,7 +159,8 @@ export const deleteChannel = async (req: AuthRequest, res: Response) => {
 
 export const getPublicChannels: RouteHandler = async (req, res) => {
   try {
-    const channels = await Channel.find({ isPrivate: false })
+    const query = req.user ? { isPrivate: false } : { isPrivate: false, isRestricted: false };
+    const channels = await Channel.find(query)
       .populate('createdBy', 'username')
       .select('-members');
     res.json(channels);

@@ -1,102 +1,101 @@
-import React, { useEffect } from "react";
-import { useStore } from "../store/useStore";
-import { ScrollArea } from "./ui/scroll-area";
+import { useEffect } from "react";
+import { useChat, useUser } from "../store/useStore";
 import { Button } from "./ui/button";
-import { Plus, Hash, Lock, MessageSquare, X } from "lucide-react";
+import { ScrollArea } from "./ui/scroll-area";
+import { Separator } from "./ui/separator";
+import { Hash, Lock, MessageSquare } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import type { Channel } from "../types/channel";
 
 interface SidebarProps {
   onClose?: () => void;
 }
 
 export function Sidebar({ onClose }: SidebarProps) {
-  const {
-    channels = [],
-    currentChannel,
-    conversations = [],
-    joinChannel,
-    error,
-    isLoading,
-    userState,
-    fetchChannels,
-    fetchConversations
-  } = useStore();
-
   const navigate = useNavigate();
+  const { channels = [], currentChannel, setCurrentChannel, error, isLoading, fetchChannels } = useChat();
+  const { userState, logout } = useUser();
+
   const isAuthenticated = userState?.type === 'authenticated';
 
   useEffect(() => {
-    // Fetch initial data
-    const loadData = async () => {
-      try {
-        await fetchChannels();
-        if (isAuthenticated) {
-          await fetchConversations();
-        }
-      } catch (err) {
-        console.error('Error loading data:', err);
+    // Only fetch if we don't have channels and we're not currently loading
+    if (!isLoading && (!channels || channels.length === 0)) {
+      fetchChannels().catch(err => {
+        console.error('Failed to fetch channels:', err);
+      });
+    }
+
+    // Set up periodic refresh
+    const intervalId = setInterval(() => {
+      if (!isLoading) {
+        fetchChannels().catch(err => {
+          console.error('Failed to refresh channels:', err);
+        });
       }
-    };
-    loadData();
-  }, [fetchChannels, fetchConversations, isAuthenticated]);
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(intervalId);
+  }, [fetchChannels, channels, isLoading]);
+
+  const handleChannelClick = (channel: Channel) => {
+    if (setCurrentChannel) {
+      setCurrentChannel(channel);
+    }
+    if (onClose) {
+      onClose();
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout(); // Wait for the logout to complete
+      navigate('/login'); // Navigate to login after successful logout
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Optionally, show an error message to the user
+    }
+  };
 
   return (
-    <aside className="w-full h-full border-r bg-background flex flex-col">
-      <div className="p-4 border-b flex justify-between items-center">
-        <h1 className="font-bold text-xl">Chappy</h1>
-        {onClose && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="md:hidden"
-          >
-            <X className="h-5 w-5" />
-          </Button>
-        )}
-      </div>
+    <div className="hidden md:flex w-64 flex-col border-r border-[#1f1f1f] bg-[#0C0C0C]">
+      {/* Header */}
+      <div className="p-4 font-semibold text-lg text-gray-200">Chappy</div>
+      <Separator className="bg-[#1f1f1f]" />
 
+      {/* Channels and DMs */}
       <ScrollArea className="flex-1">
-        <div className="p-4 space-y-4">
+        <div className="p-3 space-y-4">
           {error && (
-            <div className="p-2 text-sm text-destructive bg-destructive/10 rounded">
+            <div className="p-2 text-sm text-red-500 bg-red-500/10 rounded">
               {error}
             </div>
           )}
 
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <h2 className="font-semibold text-lg flex items-center gap-2">
-                <Hash className="h-5 w-5" />
-                Channels
-              </h2>
-              {isAuthenticated && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => navigate('/channels/new')}
-                  className="rounded-full"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
+          {/* Loading State */}
+          {isLoading ? (
+            <div className="text-center text-gray-400 py-4">Loading channels...</div>
+          ) : !channels || channels.length === 0 ? (
+            <div className="text-center text-gray-400 py-4">No channels available</div>
+          ) : (
+            /* Channels Section */
+            <div className="space-y-2">
+              <div className="text-sm font-medium text-gray-400 px-2">Channels</div>
+              {channels.map((channel) => {
+                const isSelected = currentChannel?._id === channel._id;
+                const isPrivateAndNotMember = channel.isPrivate && !channel.members?.some(
+                  m => m._id === userState?._id
+                );
 
-            <div className="space-y-1">
-              {isLoading ? (
-                <div className="text-sm text-muted-foreground p-2">Loading channels...</div>
-              ) : channels.length === 0 ? (
-                <div className="text-sm text-muted-foreground p-2">No channels yet</div>
-              ) : (
-                channels.map((channel) => (
+                return (
                   <Button
                     key={channel._id}
-                    variant={currentChannel?._id === channel._id ? "secondary" : "ghost"}
-                    className="w-full justify-start gap-2"
-                    onClick={() => {
-                      joinChannel(channel._id);
-                      onClose?.();
-                    }}
+                    variant={isSelected ? "secondary" : "ghost"}
+                    className={`w-full justify-start gap-2 text-gray-300 hover:bg-[#1f1f1f] ${
+                      isSelected ? 'bg-[#1f1f1f] text-gray-200' : ''
+                    }`}
+                    onClick={() => handleChannelClick(channel)}
+                    disabled={isPrivateAndNotMember}
                   >
                     {channel.isPrivate ? (
                       <Lock className="h-4 w-4" />
@@ -104,59 +103,44 @@ export function Sidebar({ onClose }: SidebarProps) {
                       <Hash className="h-4 w-4" />
                     )}
                     {channel.name}
+                    {channel.unreadCount > 0 && (
+                      <span className="ml-auto bg-[#1f1f1f] text-gray-300 rounded-full px-2 py-0.5 text-xs">
+                        {channel.unreadCount}
+                      </span>
+                    )}
                   </Button>
-                ))
-              )}
+                );
+              })}
             </div>
-          </div>
+          )}
 
           {/* Direct Messages Section */}
           {isAuthenticated && (
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <h2 className="font-semibold text-lg flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5" />
-                  Direct Messages
-                </h2>
+            <>
+              <Separator className="bg-[#1f1f1f]" />
+              <div className="space-y-2">
+                <div className="text-sm font-medium text-gray-400 px-2">DM</div>
                 <Button
                   variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    navigate('/messages');
-                    onClose?.();
-                  }}
-                  className="rounded-full"
+                  className="w-full justify-start text-gray-300 hover:bg-[#1f1f1f]"
+                  onClick={() => navigate('/messages')}
                 >
-                  <Plus className="h-4 w-4" />
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  View Messages
                 </Button>
               </div>
-
-              <div className="space-y-1">
-                {conversations.length === 0 ? (
-                  <div className="text-sm text-muted-foreground p-2">
-                    No conversations yet
-                  </div>
-                ) : (
-                  conversations.map((conversation) => (
-                    <Button
-                      key={conversation._id}
-                      variant="ghost"
-                      className="w-full justify-start gap-2"
-                      onClick={() => {
-                        navigate(`/messages/${conversation._id}`);
-                        onClose?.();
-                      }}
-                    >
-                      <MessageSquare className="h-4 w-4" />
-                      {conversation.username}
-                    </Button>
-                  ))
-                )}
-              </div>
-            </div>
+            </>
           )}
         </div>
       </ScrollArea>
-    </aside>
+
+      {isAuthenticated && (
+        <div className="p-4">
+          <Button variant="ghost" onClick={handleLogout} className="w-full">
+            Logout
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }

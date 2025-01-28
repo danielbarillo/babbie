@@ -4,6 +4,7 @@ interface IChannel extends mongoose.Document {
   name: string;
   description?: string;
   isPrivate: boolean;
+  isRestricted?: boolean;
   members: mongoose.Types.ObjectId[];
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
@@ -24,6 +25,10 @@ const channelSchema = new mongoose.Schema({
     maxlength: 200
   },
   isPrivate: {
+    type: Boolean,
+    default: false
+  },
+  isRestricted: {
     type: Boolean,
     default: false
   },

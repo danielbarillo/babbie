@@ -1,63 +1,41 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider } from './components/ThemeProvider';
-import { MainLayout } from './components/MainLayout';
-import { Login } from './pages/Login';
-import { Register } from './pages/Register';
-import { DirectMessages } from './pages/DirectMessages';
-import { ProtectedRoute } from './components/ProtectedRoute';
-import { useStore } from './store/useStore';
 import { useEffect } from 'react';
+import { BrowserRouter } from 'react-router-dom';
+import { ThemeProvider } from './components/providers/ThemeProvider';
+import { Toaster } from 'sonner';
+import Routes from './Routes';
+import { useAuth, useChat } from './store/useStore';
+import { socketService } from './lib/socket';
 
 function App() {
-  const { isInitialized, checkAuth } = useStore();
+  const { checkAuth, user } = useAuth();
+  const { addMessage } = useChat();
 
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
 
-  if (!isInitialized) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-background">
-        <div className="text-lg text-muted-foreground">Loading...</div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (user) {
+      const token = localStorage.getItem('token');
+      if (token) {
+        socketService.connect(token);
+        const cleanup = socketService.onMessage((message) => {
+          addMessage(message);
+        });
+        return cleanup;
+      }
+    } else {
+      socketService.disconnect();
+    }
+  }, [user, addMessage]);
 
   return (
-    <ThemeProvider>
-      <Router>
-        <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route
-            path="/chat"
-            element={
-              <ProtectedRoute>
-                <MainLayout />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/messages"
-            element={
-              <ProtectedRoute>
-                <DirectMessages />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/messages/:userId"
-            element={
-              <ProtectedRoute>
-                <DirectMessages />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </Router>
-    </ThemeProvider>
+    <BrowserRouter>
+      <ThemeProvider defaultTheme="dark" storageKey="ui-theme">
+        <Toaster position="top-center" richColors />
+        <Routes />
+      </ThemeProvider>
+    </BrowserRouter>
   );
 }
 

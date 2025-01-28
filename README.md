@@ -1,11 +1,62 @@
-# Chappy - Modern Chat Application
+# Chappy - Real-time Chat Application
 
 ## Features
+- Real-time messaging with Socket.IO
 - Public and private channels
-- Direct messaging
-- Guest access with custom display names
 - User authentication
-- Real-time messaging
+- Guest access
+- Responsive design
+
+## Quick Start
+
+### Prerequisites
+- Node.js 16+
+- MongoDB
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/chappy.git
+cd chappy
+```
+
+2. Install dependencies:
+```bash
+# Install backend dependencies
+cd backend
+npm install
+
+# Install frontend dependencies
+cd ../frontend
+npm install
+```
+
+3. Set up environment variables:
+- Copy `.env.example` to `.env` in both frontend and backend directories
+- Update the variables as needed
+
+4. Start development servers:
+```bash
+# Start backend (from backend directory)
+npm run dev
+
+# Start frontend (from frontend directory)
+npm run dev
+```
+
+5. Visit `http://localhost:5173` in your browser
+
+## Environment Variables
+
+### Backend
+- `PORT`: Server port (default: 5001)
+- `MONGODB_URI`: MongoDB connection string
+- `JWT_SECRET`: Secret for JWT tokens
+- `CORS_ORIGIN`: Allowed origin for CORS
+
+### Frontend
+- `VITE_API_URL`: Backend API URL
 
 ## Routes
 - /login - Login page (startsida)
