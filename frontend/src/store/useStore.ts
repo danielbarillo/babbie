@@ -6,6 +6,7 @@ import { createAuthSlice } from './slices/authSlice';
 import { createChatSlice } from './slices/chatSlice';
 import { createDirectMessageSlice } from './slices/directMessageSlice';
 import type { User } from '../types/user';
+import { api } from '@/services/api';
 
 type StoreSet = (
   partial: StoreState | Partial<StoreState> | ((state: StoreState) => StoreState | Partial<StoreState>),
@@ -73,6 +74,15 @@ export const useUser = () => {
     },
     logout: store.auth.logout
   };
+};
+
+export const guestLogin = async (username: string) => {
+  const response = await axios.post('/api/auth/guest-login', { username });
+  const { token } = response.data;
+  if (token) {
+    localStorage.setItem('token', token);
+  }
+  return response.data;
 };
 
 // Base selectors

@@ -11,7 +11,7 @@ import { Loader2 } from "lucide-react";
 
 export function Login() {
   const navigate = useNavigate();
-  const { login, error, isLoading: authLoading } = useAuth();
+  const { login, error, isLoading: authLoading, guestLogin } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showGuestDialog, setShowGuestDialog] = useState(false);
   const [formData, setFormData] = useState({
@@ -55,8 +55,7 @@ export function Login() {
   const handleGuestNameSubmit = async (name: string) => {
     try {
       setIsLoading(true);
-      // Here you would typically call a different method for guest login
-      toast.error('Guest login not implemented yet');
+      guestLogin(name);
     } catch (error) {
       toast.error('Guest login failed');
     } finally {

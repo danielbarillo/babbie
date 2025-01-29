@@ -113,6 +113,8 @@ export const requireAuth = async (req: AuthenticatedRequest, res: Response, next
 };
 
 // Middleware to attach user state - either authenticated or guest
+// backend/src/middleware/auth.ts
+
 export const attachUserState = async (
   req: AuthRequest,
   res: Response,
@@ -128,8 +130,21 @@ export const attachUserState = async (
 
     const decoded = jwt.verify(
       token,
-      process.env.JWT_SECRET || 'your-secret-key'
-    ) as { userId: string };
+      config.jwtSecret
+    ) as { userId?: string; isGuest?: boolean; guestUsername?: string };
+
+    if (decoded.isGuest && decoded.guestUsername) {
+      req.userState = { 
+        type: 'guest', 
+        username: decoded.guestUsername 
+      };
+      return next();
+    }
+
+    if (!decoded.userId) {
+      req.userState = { type: 'guest', username: 'Guest' };
+      return next();
+    }
 
     const user = await User.findById(decoded.userId);
     if (!user) {

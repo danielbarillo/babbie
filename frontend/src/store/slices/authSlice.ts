@@ -115,5 +115,32 @@ export const createAuthSlice: StateCreator<
         }));
       }
     },
+
+    guestLogin: async (username: string) => {
+      try {
+        set(state => ({ auth: { ...state.auth, isLoading: true, error: null } }));
+        const { token, user } = await authApi.guestLogin(username);
+        
+        localStorage.setItem('token', token);
+        set(state => ({
+          auth: {
+            ...state.auth,
+            user: { ...user },
+            isLoading: false,
+            error: null
+          }
+        }));
+      } catch (error) {
+        const message = getErrorMessage(error);
+        set(state => ({
+          auth: {
+            ...state.auth,
+            user: null,
+            isLoading: false,
+            error: message
+          }
+        }));
+      }
+    }
   }
 });

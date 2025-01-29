@@ -1,5 +1,5 @@
 import express from 'express';
-import { login, register, getMe, logout } from '../controllers/auth';
+import { login, register, getMe, logout, guestLogin } from '../controllers/auth';
 import { auth } from '../middleware/auth';
 
 const router = express.Router();
@@ -7,6 +7,7 @@ const router = express.Router();
 // Public routes
 router.post('/login', login);
 router.post('/register', register);
+router.post('/guest-login', guestLogin);
 
 // Protected routes
 router.get('/me', auth, getMe);

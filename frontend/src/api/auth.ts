@@ -19,5 +19,10 @@ export const authApi = {
 
   logout: async () => {
     await api.post('/api/auth/logout');
+  },
+
+  guestLogin: async (username: string) => {
+    const response = await api.post<LoginResponse>('/api/auth/guest-login', { username });
+    return response.data;
   }
 };

@@ -46,6 +46,46 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
+// backend/src/controllers/auth.ts
+
+export const guestLogin = async (req: Request, res: Response) => {
+  try {
+    const { username } = req.body;
+
+    if (!username) {
+      return res.status(400).json({ message: 'Username is required' });
+    }
+
+    // Validate username format (optional)
+    if (username.length < 3 || username.length > 30) {
+      return res.status(400).json({ 
+        message: 'Username must be between 3 and 30 characters' 
+      });
+    }
+
+    // Create a guest token with limited expiration
+    const token = jwt.sign(
+      { 
+        isGuest: true,
+        guestUsername: username 
+      },
+      config.jwtSecret,
+      { expiresIn: '24h' } // Guest sessions last 24 hours
+    );
+
+    res.json({
+      token,
+      user: {
+        username,
+        isGuest: true
+      }
+    });
+  } catch (error) {
+    console.error('Guest login error:', error);
+    res.status(500).json({ message: 'Server error during guest login' });
+  }
+};
+
 export const register = async (req: Request, res: Response) => {
   try {
     const { username, email, password } = req.body;

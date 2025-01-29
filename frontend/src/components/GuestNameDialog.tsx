@@ -21,7 +21,7 @@ export function GuestNameDialog({ open, onOpenChange, onSubmit }: GuestNameDialo
       setIsSubmitting(true);
       await onSubmit(name);
       onOpenChange(false);
-      setName('');
+      /* setName(''); */
     } catch (error) {
       console.error('Failed to submit guest name:', error);
     } finally {
