@@ -67,33 +67,24 @@ export const login = async (req: Request, res: Response) => {
   try {
     const { username, password } = req.body;
 
-    // Lägg till logging för felsökning
-    console.log('Login attempt:', { username });
-
-    // Hitta användaren och inkludera password-fältet
     const user = await User.findOne({ username }).select('+password');
-    console.log('User found:', user ? 'yes' : 'no');
 
     if (!user) {
       return res.status(401).json({ message: 'Invalid username or password' });
     }
 
-    // Kontrollera lösenordet
     const isMatch = await user.comparePassword(password);
-    console.log('Password match:', isMatch);
 
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid username or password' });
     }
 
-    // Generera JWT
     const token = jwt.sign(
       { userId: user._id },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
     );
 
-    // Returnera framgångsrikt svar
     res.json({
       token,
       user: {

@@ -7,7 +7,7 @@ import { useAuth, useChat } from './store/useStore';
 import { socketService } from './lib/socket';
 
 function App() {
-  const { checkAuth, user } = useAuth();
+  const { checkAuth, user, isLoading } = useAuth();
   const { addMessage } = useChat();
 
   useEffect(() => {
@@ -28,6 +28,10 @@ function App() {
       socketService.disconnect();
     }
   }, [user, addMessage]);
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <BrowserRouter>

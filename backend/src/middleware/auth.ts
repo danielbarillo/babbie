@@ -56,20 +56,42 @@ export const getAuthenticatedUserId = (userState: UserState | undefined): string
 };
 
 // Main auth middleware
-export const auth = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+export const auth = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
 
     if (!token) {
-      return res.status(401).json({ message: 'No authentication token provided' });
+      req.userState = { type: 'guest', username: 'Guest' };
+      return next();
     }
 
     const decoded = jwt.verify(token, config.jwtSecret) as JwtPayload;
-    req.user = decoded;
+
+    if (!decoded.userId) {
+      req.userState = { type: 'guest', username: 'Guest' };
+      return next();
+    }
+
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      req.userState = { type: 'guest', username: 'Guest' };
+      return next();
+    }
+
+    req.user = user;
+    req.userState = {
+      type: 'authenticated',
+      userId: user._id.toString(),
+      username: user.username,
+      email: user.email,
+      preferences: user.preferences
+    };
+
     next();
   } catch (error) {
     console.error('Auth middleware error:', error);
-    res.status(401).json({ message: 'Authentication failed' });
+    req.userState = { type: 'guest', username: 'Guest' };
+    next();
   }
 };
 
@@ -134,9 +156,9 @@ export const attachUserState = async (
     ) as { userId?: string; isGuest?: boolean; guestUsername?: string };
 
     if (decoded.isGuest && decoded.guestUsername) {
-      req.userState = { 
-        type: 'guest', 
-        username: decoded.guestUsername 
+      req.userState = {
+        type: 'guest',
+        username: decoded.guestUsername
       };
       return next();
     }

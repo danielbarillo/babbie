@@ -6,6 +6,7 @@ import type { ServerToClientEvents, ClientToServerEvents } from '../types/socket
 import type { Message, DirectMessage } from '../types/store';
 import { SOCKET_IO_URL } from '../config/constants';
 import { toast } from 'sonner';
+import { api } from '../services/api';
 
 type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
@@ -15,7 +16,7 @@ const RECONNECT_DECAY = 1.5;
 
 export function useSocket() {
   const socketRef = useRef<TypedSocket | null>(null);
-  const { token, addMessage, setError } = useStore();
+  const { token, addMessage, setError, set } = useStore();
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
   const maxReconnectAttempts = 10;
@@ -24,8 +25,17 @@ export function useSocket() {
     socketRef.current?.emit('message', { channelId, content, guestName });
   };
 
-  const sendDirectMessage = (content: string, recipientId: string) => {
-    socketRef.current?.emit('direct_message', { content, recipientId });
+  const sendDirectMessage = async (content: string, recipientId: string) => {
+    try {
+      const response = await api.post(`/dm/${recipientId}`, { content });
+      set((state) => ({
+        ...state,
+        messages: [...state.messages, response.data],
+      }));
+    } catch (error) {
+      console.error("Error sending message:", error);
+      throw error;
+    }
   };
 
   const reconnectWithBackoff = () => {

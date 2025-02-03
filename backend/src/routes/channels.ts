@@ -4,8 +4,10 @@ import {
   createChannel,
   joinChannel,
   leaveChannel,
-  getChannel
-} from '../controllers/channels';
+  getChannel,
+  deleteChannel,
+  getChannelUsers
+} from '../controllers/channelController';
 import { getChannelMessages, createMessage } from '../controllers/messages';
 import { auth, requireAuth } from '../middleware/auth';
 
@@ -17,9 +19,11 @@ router.use(auth);
 // Channel routes
 router.get('/', getChannels);
 router.post('/', requireAuth, createChannel);
-router.post('/:id/join', joinChannel);
-router.post('/:id/leave', requireAuth, leaveChannel);
+router.post('/:channelId/join', joinChannel);
+router.post('/:channelId/leave', requireAuth, leaveChannel);
 router.get('/:channelId', getChannel);
+router.delete('/:channelId', requireAuth, deleteChannel);
+router.get('/:channelId/users', getChannelUsers);
 
 // Messages routes
 router.get('/:channelId/messages', getChannelMessages);

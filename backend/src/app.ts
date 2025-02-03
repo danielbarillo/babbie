@@ -9,9 +9,12 @@ import { apiLimiter } from './middleware/rateLimiter';
 import authRoutes from './routes/auth';
 import channelRoutes from './routes/channels';
 import messageRoutes from './routes/messages';
-import userRoutes from './routes/users';
+import userRoutes from './routes/userRoutes';
 import dmRoutes from './routes/directMessages';
+import conversationRoutes from './routes/conversationRoutes';
 import mongoose from 'mongoose';
+import { Request, Response } from 'express';
+import { User } from './models/User';
 
 dotenv.config();
 
@@ -41,6 +44,7 @@ app.use('/api/channels', channelRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/dm', dmRoutes);
+app.use('/api/conversations', conversationRoutes);
 
 // Add this after other routes but before error handlers
 app.get('/api/test/db', async (req, res) => {
@@ -56,6 +60,16 @@ app.get('/api/test/db', async (req, res) => {
   }
 });
 
+app.get('/api/users', async (req, res) => {
+  try {
+    const users = await User.find({}, 'username avatarColor isOnline');
+    res.json(users);
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({ message: "Failed to fetch users" });
+  }
+});
+
 // Error handling
 app.use(notFoundHandler);
 app.use(errorHandler);
@@ -64,11 +78,7 @@ app.use(errorHandler);
 export const initializeServer = async () => {
   try {
     await connectDB();
-    console.log('Connected to MongoDB');
-
-    // Initialize WebSocket after DB connection
     wsService = new WebSocketService(httpServer);
-    console.log('WebSocket service initialized');
   } catch (err) {
     console.error('Failed to initialize server:', err);
     throw err;

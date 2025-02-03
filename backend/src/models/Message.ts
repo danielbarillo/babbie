@@ -24,7 +24,7 @@ const messageSchema = new mongoose.Schema({
       validator: function(v: any) {
         return (
           (v.type === 'guest' && typeof v.username === 'string') ||
-          (v.type === 'user' && v._id && v.username)
+          (v.type === 'authenticated' && v._id && v.username)
         );
       },
       message: 'Invalid sender format'

@@ -7,13 +7,17 @@ import { User, UserDocument } from '../models/User';
 
 export const getChannels = async (req: AuthRequest, res: Response) => {
   try {
-    const query = req.user ? {} : { isPrivate: false, isRestricted: false };
+    const query = req.userState?.type === 'authenticated'
+      ? {}  // Empty query to show all channels
+      : { isPrivate: false, isRestricted: false };
+
     const channels = await Channel.find(query)
       .populate('createdBy', 'username')
       .select('-members');
 
     res.json(channels);
   } catch (error) {
+    console.error('Error in getChannels:', error);
     res.status(500).json({ message: 'Error fetching channels' });
   }
 };
@@ -69,12 +73,15 @@ export const joinChannel = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Channel not found' });
     }
 
-    if (channel.members.some(id => id.equals(req.user!._id))) {
-      return res.status(400).json({ message: 'Already a member' });
+    // Check for private channel access
+    if (channel.isPrivate && req.userState?.type !== 'authenticated') {
+      return res.status(403).json({
+        message: 'Private channels are only accessible to registered users'
+      });
     }
 
-    if (channel.isRestricted && req.userState?.type !== 'authenticated') {
-      return res.status(403).json({ message: 'This channel is restricted to authenticated users' });
+    if (channel.members.some(id => id.equals(req.user!._id))) {
+      return res.status(400).json({ message: 'Already a member' });
     }
 
     channel.members.push(req.user._id);
@@ -124,9 +131,9 @@ export const getChannel = async (req: AuthRequest, res: Response) => {
     }
 
     const userId = req.user._id;
-    if (channel.isPrivate && !channel.members.some(id => id.equals(userId))) {
-      return res.status(403).json({ message: 'Access denied' });
-    }
+    // if (channel.isPrivate && !channel.members.some(id => id.equals(userId))) {
+    //   return res.status(403).json({ message: 'Access denied' });
+    // }
 
     res.json(channel);
   } catch (error) {
@@ -157,18 +164,6 @@ export const deleteChannel = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const getPublicChannels: RouteHandler = async (req, res) => {
-  try {
-    const query = req.user ? { isPrivate: false } : { isPrivate: false, isRestricted: false };
-    const channels = await Channel.find(query)
-      .populate('createdBy', 'username')
-      .select('-members');
-    res.json(channels);
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching public channels' });
-  }
-};
-
 export const getChannelUsers = async (req: AuthRequest, res: Response) => {
   try {
     const { channelId } = req.params;
@@ -181,7 +176,6 @@ export const getChannelUsers = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Channel not found' });
     }
 
-    // Nu har vi rätt typning för members
     const users = channel.members.map(member => ({
       _id: member._id,
       username: member.username,

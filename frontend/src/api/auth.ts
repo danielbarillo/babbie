@@ -13,8 +13,13 @@ export const authApi = {
   },
 
   checkAuth: async () => {
-    const response = await api.get<LoginResponse>('/api/auth/me');
-    return response.data;
+    try {
+      const response = await api.get('/api/auth/me');
+      return response.data;
+    } catch (error) {
+      console.error('Check auth error:', error);
+      throw error;
+    }
   },
 
   logout: async () => {

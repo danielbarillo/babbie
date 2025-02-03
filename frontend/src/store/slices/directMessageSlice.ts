@@ -16,20 +16,17 @@ export const createDirectMessageSlice: StateCreator<
 
   fetchConversations: async () => {
     try {
-      set((state) => ({ ...state, loading: true }));
-      const response = await api.get('/dm/conversations');
-      set((state) => ({
-        ...state,
+      set({ loading: true });
+      const response = await api.get('/api/dm/conversations');
+      set({
         conversations: response.data,
         loading: false
-      }));
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch conversations';
-      set((state) => ({
-        ...state,
-        error: errorMessage,
+      });
+    } catch (error) {
+      set({
+        error: 'Failed to fetch conversations',
         loading: false
-      }));
+      });
     }
   },
 
@@ -57,14 +54,15 @@ export const createDirectMessageSlice: StateCreator<
   setCurrentConversation: (conversation) => {
     set((state) => ({
       ...state,
-      currentConversation: conversation
+      currentConversation: conversation,
+      messages: []
     }));
   },
 
   sendDirectMessage: async (content: string, recipientId: string) => {
     try {
       set((state) => ({ ...state, loading: true }));
-      const response = await api.post(`/dm/${recipientId}`, { content });
+      const response = await api.post(`/api/dm/${recipientId}`, { content });
       set((state) => ({
         ...state,
         messages: [...state.messages, response.data],
@@ -81,23 +79,26 @@ export const createDirectMessageSlice: StateCreator<
     }
   },
 
-  fetchDirectMessages: async (conversationId: string) => {
+  fetchDirectMessages: async (userId: string) => {
     try {
-      set((state) => ({ ...state, loading: true }));
-      const response = await api.get(`/dm/${conversationId}/messages`);
-      set((state) => ({
-        ...state,
+      set({ loading: true });
+      const response = await api.get(`/api/dm/${userId}`);
+      set({
         messages: response.data,
         loading: false
-      }));
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch messages';
-      set((state) => ({
-        ...state,
-        error: errorMessage,
+      });
+    } catch (error) {
+      set({
+        error: 'Failed to fetch messages',
         loading: false
-      }));
-      throw error;
+      });
     }
+  },
+
+  clearMessages: () => {
+    set((state) => ({
+      ...state,
+      messages: []
+    }));
   }
 });

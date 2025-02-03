@@ -2,10 +2,15 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { Card, CardHeader, CardContent, CardFooter } from "../components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardContent,
+  CardFooter,
+} from "../components/ui/card";
 import { GuestNameDialog } from "../components/GuestNameDialog";
-import { useAuth } from '../store/useStore';
-import { toast } from 'sonner';
+import { useAuth } from "../store/useStore";
+import { toast } from "sonner";
 import { LoadingOverlay } from "../components/ui/LoadingOverlay";
 import { Loader2 } from "lucide-react";
 
@@ -15,15 +20,15 @@ export function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [showGuestDialog, setShowGuestDialog] = useState(false);
   const [formData, setFormData] = useState({
-    username: '',
-    password: ''
+    username: "",
+    password: "",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -31,15 +36,15 @@ export function Login() {
     e.preventDefault();
 
     if (!formData.username || !formData.password) {
-      toast.error('Please fill in all fields');
+      toast.error("Please fill in all fields");
       return;
     }
 
     try {
       setIsLoading(true);
       await login(formData.username, formData.password);
-      toast.success('Welcome back!');
-      navigate('/chat');
+      toast.success("Welcome back!");
+      navigate("/chat");
     } catch (error) {
       // Error is already handled by the auth slice
       // and displayed in the form
@@ -57,7 +62,7 @@ export function Login() {
       setIsLoading(true);
       guestLogin(name);
     } catch (error) {
-      toast.error('Guest login failed');
+      toast.error("Guest login failed");
     } finally {
       setIsLoading(false);
       setShowGuestDialog(false);
@@ -123,18 +128,14 @@ export function Login() {
           </CardContent>
 
           <CardFooter className="flex flex-col gap-4">
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading}
-            >
+            <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Signing in...
                 </>
               ) : (
-                'Sign in'
+                "Sign in"
               )}
             </Button>
 
@@ -160,12 +161,12 @@ export function Login() {
             </Button>
 
             <p className="text-sm text-muted-foreground text-center">
-              Don't have an account?{' '}
+              Don't have an account?{" "}
               <Button
                 type="button"
                 variant="link"
                 className="p-0 h-auto font-normal"
-                onClick={() => navigate('/register')}
+                onClick={() => navigate("/register")}
                 disabled={isLoading}
               >
                 Create one

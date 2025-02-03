@@ -1,14 +1,14 @@
-import { useState } from 'react';
-import { useChat } from '../store/useStore';
-import { Button } from './ui/button';
-import { Textarea } from './ui/textarea';
-import { toast } from 'sonner';
-import { SendHorizontal } from 'lucide-react';
+import { useState } from "react";
+import { useChat } from "../store/useStore";
+import { Button } from "./ui/button";
+import { Textarea } from "./ui/textarea";
+import { toast } from "sonner";
+import { SendHorizontal } from "lucide-react";
 
 export function MessageInput() {
   const { sendMessage, currentChannel, isLoading } = useChat();
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,18 +17,18 @@ export function MessageInput() {
 
     try {
       await sendMessage(message, currentChannel._id);
-      setMessage('');
-      setError(''); // Clear any previous error
+      setMessage("");
+      setError(""); // Clear any previous error
     } catch (error) {
-      setError('Failed to send message');
+      setError("Failed to send message");
       setTimeout(() => {
-        setError(''); // Clear the error after 3 seconds
+        setError(""); // Clear the error after 3 seconds
       }, 3000);
     }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
     }

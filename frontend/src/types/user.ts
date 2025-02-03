@@ -26,3 +26,13 @@ export interface GuestUser extends BaseUser {
 }
 
 export type User = AuthenticatedUser | GuestUser;
+
+export interface User {
+  _id: string;
+  username: string;
+  email: string;
+  isOnline: boolean;
+  avatarColor: string;
+  createdAt: string;
+  updatedAt: string;
+}

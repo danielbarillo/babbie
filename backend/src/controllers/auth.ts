@@ -58,16 +58,16 @@ export const guestLogin = async (req: Request, res: Response) => {
 
     // Validate username format (optional)
     if (username.length < 3 || username.length > 30) {
-      return res.status(400).json({ 
-        message: 'Username must be between 3 and 30 characters' 
+      return res.status(400).json({
+        message: 'Username must be between 3 and 30 characters'
       });
     }
 
     // Create a guest token with limited expiration
     const token = jwt.sign(
-      { 
+      {
         isGuest: true,
-        guestUsername: username 
+        guestUsername: username
       },
       config.jwtSecret,
       { expiresIn: '24h' } // Guest sessions last 24 hours
@@ -121,11 +121,11 @@ export const register = async (req: Request, res: Response) => {
 
 export const getMe = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const user = await User.findById(req.user?.userId).select('-password');
+    const user = await User.findById(req.user?._id).select('-password');
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    res.json({ user });
+    res.json(user);
   } catch (error) {
     console.error('Get user error:', error);
     res.status(500).json({ message: 'Server error' });

@@ -1,8 +1,7 @@
 import axios from 'axios';
-import { VITE_API_URL } from './constants';
 
 const api = axios.create({
-  baseURL: VITE_API_URL,
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5001/api',
   headers: {
     'Content-Type': 'application/json'
   },
@@ -21,9 +20,27 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.data?.message) {
-      return Promise.reject(new Error(error.response.data.message));
+  async (error) => {
+    // Handle token expiration
+    if (error.response?.status === 401) {
+      // Only redirect to login if we're not already trying to refresh the token
+      if (!error.config._isRetry) {
+        try {
+          // Try to refresh the token
+          const response = await api.post('/auth/refresh-token');
+          const newToken = response.data.token;
+          if (newToken) {
+            localStorage.setItem('token', newToken);
+            error.config.headers.Authorization = `Bearer ${newToken}`;
+            error.config._isRetry = true;
+            return api(error.config);
+          }
+        } catch (refreshError) {
+          localStorage.removeItem('token');
+          window.location.href = '/login';
+          return Promise.reject(refreshError);
+        }
+      }
     }
     return Promise.reject(error);
   }

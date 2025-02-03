@@ -3,6 +3,7 @@ import { DirectMessage } from '../models/DirectMessage';
 import { User } from '../models/User';
 import type { AuthRequest } from '../types/express';
 import mongoose from 'mongoose';
+import { handleControllerError } from '../utils/errors';
 
 export const getDirectMessages = async (req: AuthRequest, res: Response) => {
   try {
@@ -13,13 +14,6 @@ export const getDirectMessages = async (req: AuthRequest, res: Response) => {
     const { userId } = req.params;
     const currentUserId = req.user._id;
 
-    // Validate that recipient exists
-    const recipient = await User.findById(userId);
-    if (!recipient) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // Get messages between the two users
     const messages = await DirectMessage.find({
       $or: [
         { sender: currentUserId, recipient: userId },
@@ -27,13 +21,24 @@ export const getDirectMessages = async (req: AuthRequest, res: Response) => {
       ]
     })
       .populate('sender', 'username avatarColor')
-      .sort({ createdAt: 1 })
+      .populate('recipient', 'username avatarColor')
+      .sort({ createdAt: -1 })
       .limit(100);
+
+    // Mark messages as read
+    await DirectMessage.updateMany(
+      {
+        recipient: currentUserId,
+        sender: userId,
+        read: false
+      },
+      { read: true }
+    );
 
     res.json(messages);
   } catch (error) {
-    console.error('Error fetching direct messages:', error);
-    res.status(500).json({ message: 'Error fetching direct messages' });
+    const { statusCode, message } = handleControllerError(error);
+    res.status(statusCode).json({ message });
   }
 };
 
@@ -45,32 +50,29 @@ export const sendDirectMessage = async (req: AuthRequest, res: Response) => {
 
     const { userId } = req.params;
     const { content } = req.body;
-    const senderId = req.user._id;
 
-    if (!content || !content.trim()) {
+    if (!content?.trim()) {
       return res.status(400).json({ message: 'Message content is required' });
     }
 
-    // Validate that recipient exists
-    const recipient = await User.findById(userId);
-    if (!recipient) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // Create and save the message
     const message = new DirectMessage({
       content: content.trim(),
-      sender: senderId,
-      recipient: userId
+      sender: req.user._id,
+      recipient: userId,
+      read: false
     });
 
     await message.save();
-    await message.populate('sender', 'username avatarColor');
+    await message.populate([
+      { path: 'sender', select: 'username avatarColor' },
+      { path: 'recipient', select: 'username avatarColor' }
+    ]);
 
+    // Remove socket emission
     res.status(201).json(message);
   } catch (error) {
-    console.error('Error sending direct message:', error);
-    res.status(500).json({ message: 'Error sending direct message' });
+    const { statusCode, message } = handleControllerError(error);
+    res.status(statusCode).json({ message });
   }
 };
 
@@ -82,7 +84,6 @@ export const getConversations = async (req: AuthRequest, res: Response) => {
 
     const userId = req.user._id;
 
-    // Get the latest message from each conversation
     const conversations = await DirectMessage.aggregate([
       {
         $match: {
@@ -115,9 +116,7 @@ export const getConversations = async (req: AuthRequest, res: Response) => {
           as: 'user'
         }
       },
-      {
-        $unwind: '$user'
-      },
+      { $unwind: '$user' },
       {
         $project: {
           _id: 1,
@@ -134,8 +133,8 @@ export const getConversations = async (req: AuthRequest, res: Response) => {
 
     res.json(conversations);
   } catch (error) {
-    console.error('Error fetching conversations:', error);
-    res.status(500).json({ message: 'Error fetching conversations' });
+    const { statusCode, message } = handleControllerError(error);
+    res.status(statusCode).json({ message });
   }
 };
 

@@ -6,7 +6,8 @@ import { createAuthSlice } from './slices/authSlice';
 import { createChatSlice } from './slices/chatSlice';
 import { createDirectMessageSlice } from './slices/directMessageSlice';
 import type { User } from '../types/user';
-import { api } from '@/services/api';
+import { authApi } from '../api/auth';
+import axios from 'axios';
 
 type StoreSet = (
   partial: StoreState | Partial<StoreState> | ((state: StoreState) => StoreState | Partial<StoreState>),
@@ -35,21 +36,15 @@ declare module '../types/store' {
   }
 }
 
-export const useStore = create<StoreState>()((...args) => ({
-  ...createAuthSlice(...args),
-  ...createChatSlice(...args),
-  ...createDirectMessageSlice(...args),
-  logout: async () => {
-    try {
-      await authApi.logout();
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      localStorage.removeItem('token');
-      set(state => ({ auth: { ...state.auth, user: null, error: null } }));
-    }
-  }
-}));
+export const useStore = create<StoreState>()(
+  devtools(
+    (...a) => ({
+      ...createAuthSlice(...a),
+      ...createChatSlice(...a),
+      ...createDirectMessageSlice(...a)
+    })
+  )
+);
 
 // Convenience hooks
 export const useAuth = () => useStore(state => state.auth);
@@ -213,14 +208,26 @@ export const chatSlice = (set: StoreSet, get: StoreGet) => ({
     },
 
     joinChannel: async (channelId: string) => {
-      console.log('Channel ID:', channelId);
       try {
         const response = await fetch(`/api/channels/${channelId}/join`, {
-          method: 'POST'
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
         });
+
         if (!response.ok) {
-          throw new Error('Failed to join channel');
+          const error = await response.json();
+          if (response.status === 403) {
+            throw new Error('This channel requires authentication');
+          }
+          throw new Error(error.message || 'Failed to join channel');
         }
+
+        // Refresh channels after joining
+        await get().chat.fetchChannels();
+
       } catch (error) {
         console.error('Error joining channel:', error);
         set({

@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useSocket } from '../context/SocketContext';
-import { useAuth } from '../context/AuthContext';
-import type { Channel } from '../types/channel';
-import axios from 'axios';
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useSocket } from "../context/SocketContext";
+import { useAuth } from "../context/AuthContext";
+import type { Channel } from "../types/channel";
+import axios from "axios";
 
 export default function ChannelList() {
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -19,41 +19,46 @@ export default function ChannelList() {
         setIsLoading(true);
         setError(null);
 
-        const response = await axios.get('/api/channels', {
-          headers: token ? {
-            Authorization: `Bearer ${token}`
-          } : {}
+        console.log("Fetching channels with token:", token);
+
+        const response = await axios.get("/api/channels", {
+          headers: token
+            ? {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              }
+            : {},
         });
 
-        console.log('Channels response:', response.data);
+        console.log("Channels response:", response.data);
         setChannels(response.data);
       } catch (error) {
-        console.error('Error fetching channels:', error);
-        setError('Failed to load channels');
+        console.error("Error fetching channels:", error);
+        setError("Failed to load channels");
       } finally {
         setIsLoading(false);
       }
     };
 
-    console.log('Channel ID before API call:', channelId);
+    console.log("Channel ID before API call:", channelId);
     fetchChannels();
 
     // Listen for channel updates via WebSocket
     if (socket) {
-      socket.on('channel_updated', fetchChannels);
-      socket.on('channel_created', fetchChannels);
-      socket.on('channel_deleted', fetchChannels);
+      socket.on("channel_updated", fetchChannels);
+      socket.on("channel_created", fetchChannels);
+      socket.on("channel_deleted", fetchChannels);
 
       return () => {
-        socket.off('channel_updated');
-        socket.off('channel_created');
-        socket.off('channel_deleted');
+        socket.off("channel_updated");
+        socket.off("channel_created");
+        socket.off("channel_deleted");
       };
     }
   }, [socket, token]);
 
   const handleChannelClick = (channel) => {
-    console.log('Channel:', channel);
+    console.log("Channel:", channel);
     setCurrentChannel(channel);
     navigate(`/channels/${channel}`);
   };
@@ -81,7 +86,9 @@ export default function ChannelList() {
             onClick={() => handleChannelClick(channel._id)}
           >
             <span className="channel-name">{channel.name}</span>
-            {channel.isPrivate && <span className="private-badge">Private</span>}
+            {channel.isPrivate && (
+              <span className="private-badge">Private</span>
+            )}
           </li>
         ))}
       </ul>

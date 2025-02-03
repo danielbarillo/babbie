@@ -9,6 +9,8 @@ import { Button } from "./ui/button";
 import { toast } from "sonner";
 import type { Message } from "../types/messages";
 import { useNavigate } from "react-router-dom";
+import { useUser } from "../contexts/UserContext";
+import type { Channel } from "../types/channels";
 
 export default function Chat() {
   const navigate = useNavigate();
@@ -24,6 +26,7 @@ export default function Chat() {
     clearState,
   } = useChatFeatures();
   const { logout } = useAuth();
+  const { userState } = useUser();
 
   const handleLogout = async () => {
     try {
@@ -124,6 +127,21 @@ export default function Chat() {
     sendMessage,
   ]);
 
+  const canSendMessage = (channel: Channel) => {
+    // For private channels, only authenticated users can send messages
+    if (channel?.isPrivate) {
+      return userState?.type === "authenticated";
+    }
+
+    // For restricted channels, require authentication
+    if (channel?.isRestricted) {
+      return userState?.type === "authenticated";
+    }
+
+    // For public channels, anyone can send messages
+    return true;
+  };
+
   if (isLoading) {
     return <div>Loading channels...</div>;
   }
@@ -195,7 +213,13 @@ export default function Chat() {
       {/* Message Input */}
       {currentChannel && (
         <div className="mt-auto border-t border-[#1f1f1f]">
-          <MessageInput />
+          {canSendMessage(currentChannel) ? (
+            <MessageInput />
+          ) : (
+            <div className="p-4 text-center text-yellow-500 bg-yellow-500/10">
+              You need to be logged in to send messages in this channel
+            </div>
+          )}
         </div>
       )}
     </div>

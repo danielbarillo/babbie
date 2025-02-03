@@ -14,11 +14,12 @@ export interface BaseMessage {
 export interface Message {
   _id: string;
   content: string;
-  channelId: string;
   sender: {
-    _id: string;
+    _id?: string;
     username: string;
+    type: 'authenticated' | 'guest';
   };
+  channel: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -29,11 +30,13 @@ export interface DirectMessage {
   sender: {
     _id: string;
     username: string;
+    avatarColor?: string;
   };
   recipient: {
     _id: string;
     username: string;
-  };
+  } | null;
+  read: boolean;
   createdAt: string;
   updatedAt: string;
 }

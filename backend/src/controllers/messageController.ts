@@ -43,62 +43,46 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
   try {
     const { channelId } = req.params;
     const { content, guestName } = req.body;
-    console.log('Request body:', req.body);  // Debug request body
-    console.log('User state:', req.userState);  // Debug user state
 
-    if (!content || !content.trim()) {
+    // Basic validation
+    if (!content?.trim()) {
       return res.status(400).json({ message: 'Message content is required' });
     }
 
-    // Kontrollera att kanalen finns
+    // Check channel exists and get its properties
     const channel = await Channel.findById(channelId);
     if (!channel) {
       return res.status(404).json({ message: 'Channel not found' });
     }
 
-    // Validera gästnamn för gästanvändare
-    if (req.userState?.type === 'guest' && !guestName) {
-      return res.status(400).json({ message: 'Guest name is required for guest users' });
+    // Check permissions
+    if ((channel.isPrivate || channel.isRestricted) && req.userState?.type !== 'authenticated') {
+      return res.status(403).json({
+        message: 'Only registered users can send messages in this channel'
+      });
     }
 
-    // Kontrollera behörighet för privata kanaler
-    if (channel.isPrivate) {
-      if (req.userState?.type !== 'authenticated') {
-        return res.status(403).json({ message: 'Authentication required for private channels' });
-      }
-
-      const userId = new Types.ObjectId(req.userState._id);
-      const isChannelMember = channel.members.some(id => id.equals(userId));
-
-      if (!isChannelMember) {
-        return res.status(403).json({ message: 'You are not a member of this channel' });
-      }
-    }
-
-    // Skapa meddelandet
+    // Create and save message
     const message = new Message({
       content: content.trim(),
       channel: channelId,
-      sender: req.userState?.type === 'authenticated' ? {
-        _id: req.userState._id,
-        username: req.userState.username,
-        type: 'authenticated'
-      } : {
-        type: 'guest',
-        username: guestName
-      }
+      sender: req.userState?.type === 'authenticated'
+        ? {
+            _id: req.userState._id,
+            username: req.userState.username,
+            type: 'authenticated'
+          }
+        : {
+            username: guestName || 'Guest',
+            type: 'guest'
+          }
     });
 
     await message.save();
-    console.log('Message saved:', message);
-
-    res.status(201).json(message);
+    return res.status(201).json(message);
   } catch (error) {
-    console.error('Error details:', error);
-    res.status(500).json({
-      message: 'Error sending message',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    console.error('Error sending message:', error);
+    return res.status(500).json({ message: 'Internal server error' });
   }
 };
 

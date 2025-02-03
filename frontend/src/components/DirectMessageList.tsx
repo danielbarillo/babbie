@@ -1,9 +1,10 @@
 import { useEffect, useRef } from "react";
-import { useChat, useUser } from "../store/useStore";
-import { format } from "date-fns";
+import { useStore, useUser } from "../store/useStore";
 import { Card } from "./ui/card";
+import { ScrollArea } from "./ui/scroll-area";
+import { Loader2 } from "lucide-react";
+import { format } from "date-fns";
 import type { DirectMessage } from "../types/messages";
-import type { AuthenticatedUser } from "../types";
 
 interface DirectMessageListProps {
   currentConversation: {
@@ -15,42 +16,70 @@ interface DirectMessageListProps {
 export function DirectMessageList({
   currentConversation,
 }: DirectMessageListProps) {
-  const { directMessages } = useChat();
+  const { messages = [], isLoading } = useStore();
   const { userState } = useUser();
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const filteredMessages = directMessages.filter((msg: DirectMessage) => {
-    if (!userState || userState.type !== 'authenticated') return false;
-    const authenticatedUser = userState as AuthenticatedUser;
-
-    const isOwnMessage = msg.sender._id === authenticatedUser._id;
-    const isRecipient = msg.recipientId === currentConversation?._id;
-    const isSender = msg.sender._id === currentConversation?._id;
-
-    return (isOwnMessage && isRecipient) || (!isOwnMessage && isSender);
-  });
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollTop = messagesEndRef.current.scrollHeight;
-    }
-  }, [directMessages]);
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
-  if (!currentConversation) return null;
+  if (isLoading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!currentConversation) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-muted-foreground">
+        Select a conversation to start chatting
+      </div>
+    );
+  }
 
   return (
-    <div ref={messagesEndRef} className="flex-1 overflow-y-auto p-4 space-y-4">
-      {filteredMessages.map((message) => (
-        <Card key={message._id} className="p-4">
-          <div className="flex justify-between items-start">
-            <span className="font-medium">{message.sender.username}</span>
-            <span className="text-xs text-muted-foreground">
-              {format(new Date(message.createdAt), "HH:mm")}
-            </span>
-          </div>
-          <p className="mt-1">{message.content}</p>
-        </Card>
-      ))}
+    <div className="relative flex-1 overflow-hidden">
+      <ScrollArea className="h-full">
+        <div className="p-4 space-y-4">
+          {messages && messages.length > 0 ? (
+            messages.map((message: DirectMessage) => {
+              const isOwnMessage = message.sender._id === userState?._id;
+              return (
+                <Card
+                  key={message._id}
+                  className={`p-4 max-w-md ${
+                    isOwnMessage 
+                      ? "bg-[#1f2d33] border-[#1f1f1f] ml-auto" 
+                      : "bg-[#1a2733] border-[#1f1f1f]"
+                  }`}
+                >
+                  <div className="flex justify-between items-start gap-2">
+                    <div className={`font-medium ${
+                      isOwnMessage ? "text-green-300" : "text-blue-300"
+                    }`}>
+                      {message.sender.username}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {format(new Date(message.createdAt), "HH:mm")}
+                    </div>
+                  </div>
+                  <div className="text-gray-200 mt-1">
+                    {message.content}
+                  </div>
+                </Card>
+              );
+            })
+          ) : (
+            <div className="text-center text-muted-foreground">
+              No messages yet
+            </div>
+          )}
+          <div ref={bottomRef} />
+        </div>
+      </ScrollArea>
     </div>
   );
 }

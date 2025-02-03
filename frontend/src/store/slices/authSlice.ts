@@ -47,9 +47,13 @@ export const createAuthSlice: StateCreator<
       }
     },
 
-    register: async (username: string, email: string, password: string) => {
+    register: async (data: {
+      username: string;
+      email: string;
+      password: string
+    }) => {
       try {
-        const { token, user } = await authApi.register({ username, email, password });
+        const { token, user } = await authApi.register(data);
         localStorage.setItem('token', token);
         set(state => ({ auth: { ...state.auth, user, error: null } }));
         return user;
@@ -77,28 +81,56 @@ export const createAuthSlice: StateCreator<
         const token = localStorage.getItem('token');
 
         if (!token) {
-          set(state => ({ auth: { ...state.auth, user: null, isLoading: false } }));
+          set(state => ({ 
+            auth: { 
+              ...state.auth, 
+              user: null, 
+              isLoading: false,
+              isAuthenticated: false 
+            } 
+          }));
           return;
         }
 
-        const { user } = await authApi.checkAuth();
+        const user = await authApi.checkAuth();
+        
+        // Add default values for optional fields
+        const transformedUser = {
+          _id: user._id,
+          username: user.username,
+          email: user.email,
+          isOnline: user.isOnline || false,
+          status: user.status || 'offline',
+          avatarColor: user.avatarColor || 'text-blue-500',
+          preferences: user.preferences || {
+            theme: 'light',
+            notifications: true,
+            language: 'en'
+          },
+          lastSeen: user.lastSeen || new Date().toISOString(),
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt
+        };
+
         set(state => ({
           auth: {
             ...state.auth,
-            user,
+            user: transformedUser,
             isLoading: false,
-            error: null
+            error: null,
+            isAuthenticated: true
           }
         }));
       } catch (error) {
+        console.error('Auth check error:', error);
         localStorage.removeItem('token');
-        const message = getErrorMessage(error);
         set(state => ({
           auth: {
             ...state.auth,
             user: null,
             isLoading: false,
-            error: message
+            error: getErrorMessage(error),
+            isAuthenticated: false
           }
         }));
       }
@@ -120,7 +152,7 @@ export const createAuthSlice: StateCreator<
       try {
         set(state => ({ auth: { ...state.auth, isLoading: true, error: null } }));
         const { token, user } = await authApi.guestLogin(username);
-        
+
         localStorage.setItem('token', token);
         set(state => ({
           auth: {
